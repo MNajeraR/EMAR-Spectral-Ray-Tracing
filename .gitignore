@@ -1,0 +1,84 @@
+# ============================================================
+# EMAR - Git ignore rules
+# ============================================================
+
+
+# ------------------------------------------------------------
+# Zemax optical models
+# ------------------------------------------------------------
+# Optical design files are intentionally excluded from the
+# public repository. Users must provide the corresponding
+# Zemax model locally inside the Zemax/ directory.
+
+Zemax/*
+!Zemax/.gitkeep
+
+
+# ------------------------------------------------------------
+# Python cache files
+# ------------------------------------------------------------
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+# ------------------------------------------------------------
+# Spyder project files
+# ------------------------------------------------------------
+
+.spyproject/
+.spyderproject
+
+
+# ------------------------------------------------------------
+# Jupyter
+# ------------------------------------------------------------
+
+.ipynb_checkpoints/
+
+
+# ------------------------------------------------------------
+# Virtual environments
+# ------------------------------------------------------------
+
+venv/
+env/
+.venv/
+.env/
+
+
+# ------------------------------------------------------------
+# Operating-system files
+# ------------------------------------------------------------
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# ------------------------------------------------------------
+# Temporary files
+# ------------------------------------------------------------
+
+*.tmp
+*.temp
+*.bak
+*~
+
+
+# ------------------------------------------------------------
+# Generated figures
+# ------------------------------------------------------------
+# Figures produced by the analysis scripts can be regenerated
+# and are therefore not version-controlled.
+
+Results/*.png
+Results/*.pdf
+
+
+# ------------------------------------------------------------
+# Keep selected numerical results
+# ------------------------------------------------------------
+# CSV files are intentionally NOT ignored because they contain
+# compact numerical products used by subsequent analyses.
