@@ -1048,3 +1048,269 @@ def calculate_centroids(
 
 
     return centroids_by_config
+
+##############################################################
+# Helper: trace one original Zemax configuration
+##############################################################
+
+def trace_original_order(
+    ln,
+    config,
+    order,
+    surf,
+    px,
+    py
+):
+    """
+    Trace the 11 original wavelength slots of a Zemax configuration.
+    """
+
+    ln.zSetConfig(
+        config
+    )
+
+    ln.zGetUpdate()
+
+
+    wavelengths = []
+    spots = {}
+
+
+    for wave_num in range(
+        1,
+        12
+    ):
+
+        wavelength = ln.zGetWave(
+            wave_num
+        ).wavelength
+
+
+        x, y = trace_pupil(
+            ln=ln,
+            wave_num=wave_num,
+            surf=surf,
+            px=px,
+            py=py,
+            hx=0.0,
+            hy=0.0
+        )
+
+
+        wavelengths.append(
+            wavelength
+        )
+
+
+        spots[
+            float(wavelength)
+        ] = {
+            "x": x.copy(),
+            "y": y.copy()
+        }
+
+
+    return {
+        "order": order,
+        "wavelengths": np.asarray(
+            wavelengths
+        ),
+        "spots": spots
+    }
+
+
+##############################################################
+# Helper: trace one reconstructed intermediate order
+##############################################################
+
+def trace_reconstructed_order(
+    ln,
+    base_config,
+    target_order,
+    wavelengths,
+    surf,
+    px,
+    py,
+    row_order,
+    row_wave1
+):
+    """
+    Trace one reconstructed echelle order by temporarily modifying
+    Configuration 1.
+
+    The original diffraction order and WAVE 1 MCE entries are always
+    restored before returning.
+    """
+
+    ##########################################################
+    # Activate base configuration
+    ##########################################################
+
+    ln.zSetConfig(
+        base_config
+    )
+
+    ln.zGetUpdate()
+
+
+    ##########################################################
+    # Save original MCE entries
+    ##########################################################
+
+    original_order = ln.zGetMulticon(
+        base_config,
+        row_order
+    )
+
+
+    original_wave1 = ln.zGetMulticon(
+        base_config,
+        row_wave1
+    )
+
+
+    ##########################################################
+    # Storage
+    ##########################################################
+
+    spots = {}
+
+
+    ##########################################################
+    # Temporary modification
+    ##########################################################
+
+    try:
+
+        ######################################################
+        # Set reconstructed diffraction order
+        ######################################################
+
+        ln.zSetMulticon(
+            base_config,
+            row_order,
+            float(target_order),
+            original_order.status,
+            original_order.pickupRow,
+            original_order.pickupConfig,
+            original_order.scale,
+            original_order.offset
+        )
+
+
+        ln.zGetUpdate()
+
+
+        ######################################################
+        # Verify order
+        ######################################################
+
+        order_zemax = ln.zGetMulticon(
+            base_config,
+            row_order
+        ).value
+
+
+        print(
+            f"\nOrder m = {target_order}"
+        )
+
+        print(
+            f"Zemax PRAM = {order_zemax:.0f}"
+        )
+
+
+        ######################################################
+        # Trace reconstructed wavelengths
+        ######################################################
+
+        for wavelength in wavelengths:
+
+            ln.zSetMulticon(
+                base_config,
+                row_wave1,
+                float(wavelength),
+                original_wave1.status,
+                original_wave1.pickupRow,
+                original_wave1.pickupConfig,
+                original_wave1.scale,
+                original_wave1.offset
+            )
+
+
+            ln.zGetUpdate()
+
+
+            wave_zemax = ln.zGetWave(
+                1
+            ).wavelength
+
+
+            x, y = emar_utils.trace_pupil(
+                ln=ln,
+                wave_num=1,
+                surf=surf,
+                px=px,
+                py=py,
+                hx=0.0,
+                hy=0.0
+            )
+
+
+            spots[
+                float(wavelength)
+            ] = {
+                "x": x.copy(),
+                "y": y.copy()
+            }
+
+
+            if len(x) != len(px):
+
+                print(
+                    f"  lambda = {wave_zemax:.9f} um | "
+                    f"{len(x)}/{len(px)} valid rays"
+                )
+
+
+    ##########################################################
+    # Restore original configuration
+    ##########################################################
+
+    finally:
+
+        ln.zSetMulticon(
+            base_config,
+            row_wave1,
+            original_wave1.value,
+            original_wave1.status,
+            original_wave1.pickupRow,
+            original_wave1.pickupConfig,
+            original_wave1.scale,
+            original_wave1.offset
+        )
+
+
+        ln.zSetMulticon(
+            base_config,
+            row_order,
+            original_order.value,
+            original_order.status,
+            original_order.pickupRow,
+            original_order.pickupConfig,
+            original_order.scale,
+            original_order.offset
+        )
+
+
+        ln.zGetUpdate()
+
+
+    return {
+        "order": target_order,
+        "wavelengths": wavelengths.copy(),
+        "spots": spots
+    }
+
+
+
