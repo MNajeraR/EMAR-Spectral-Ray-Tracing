@@ -43,31 +43,35 @@ local Zemax optical model.
 
 ```text
 EMAR/
-├── README.md
-├── requirements.txt
-├── .gitignore
+├──> README.md
+├──> requirements.txt
+├──> .gitignore
 │
-├── scripts/
-│   ├── EMAR_All_confs_surf26.py
-│   ├── EMAR_All_confs_surf54.py
-│   └── EMAR_missing_orders.py
+├──> scripts/
+│   ├──> EMAR_All_confs_surf26.py
+│   ├──> EMAR_All_confs_surf54.py
+│   ├──> EMAR_missing_orders.py
+│   └──> EMAR_full_orders.py
 │
-├── experiments/
-│   ├── 01_pupil_sampling.py
-│   ├── 02_single_config_original_waves.py
-│   ├── 03_single_config_100_waves.py
-│   └── 04_two_configs_100_waves.py
+├──> experiments/
+│   ├──> 01_pupil_sampling.py
+│   ├──> 02_single_config_original_waves.py
+│   ├──> 03_single_config_100_waves.py
+│   ├──> 04_two_configs_100_waves.py
+│   ├──> 05_intermediate_order_61.py
+│   ├──> 06_missing_orders_61_66.py
+│   └──> 07_all_orders_11_wavelengths.py
 │
-├── utils/
-│   ├── __init__.py
-│   ├── emar_utils.py
-│   └── emar_plots.py
+├──> utils/
+│   ├──> __init__.py
+│   ├──> emar_utils.py
+│   └──> emar_plots.py
 │
-├── Results/
-│   └── echelle_orders_60_144.csv
+├──> Results/
+│   └──> echelle_orders_60_144.csv
 │
-└── Zemax/
-    └── .gitkeep
+└──> Zemax/
+    └──> .gitkeep
 ```
 ### `scripts/`
 
@@ -95,21 +99,52 @@ system at selected stages of the spectrograph.
   analyzes the `m * lambda` relation, and reconstructs the wavelength
   sampling for every integer echelle order from `m = 60` to `m = 144`.
 
+- `EMAR_full_orders.py` performs dense ray tracing of the complete
+  integer echelle-order sequence from `m = 60` to `m = 144`. The
+  script reads the previously reconstructed order definitions directly
+  from `Results/echelle_orders_60_144.csv`, which identifies each order
+  as original or reconstructed and provides its 11 reference
+  wavelengths. For each order, a dense wavelength grid is generated
+  between its first and last reference wavelengths and propagated to
+  the final image plane. The resulting ray data can be visualized as
+  complete ray footprints, spectral centroid traces, or a simplified
+  detector representation.
 
 ### `experiments/`
 
 Contains the progressive validation experiments used during development
-of the ray-tracing methodology. These scripts document the transition 
-from simple pupil-sampling tests to the complete multi-configuration 
-analysis:
+of the ray-tracing and order reconstruction methodology. These
+scripts document the transition from simple pupil-sampling tests to the
+validated reconstruction of the complete spectral format:
 
-1. Visualization and validation of pupil-sampling methods.
-2. Tracing the original wavelengths of a single Zemax configuration.
-3. Dense spectral sampling of a single configuration.
-4. Simultaneous dense spectral sampling of two configurations.
+1. `01_pupil_sampling.py` visualizes and validates the normalized-pupil
+   sampling methods.
 
-They are retained to document and reproduce the validation process
-leading to the main analysis scripts.
+2. `02_single_config_original_waves.py` traces the original reference
+   wavelengths of a single Zemax configuration.
+
+3. `03_single_config_100_waves.py` introduces dense wavelength sampling
+   within a single original configuration.
+
+4. `04_two_configs_100_waves.py` extends the dense sampling procedure
+   to two Zemax configurations.
+
+5. `05_intermediate_order_61.py` reconstructs and ray traces the first
+   intermediate diffraction order, `m = 61`, between the original
+   `m = 60` and `m = 67` configurations. This experiment validates
+   temporary modification of both the echelle diffraction order and
+   wavelength through the MCE.
+
+6. `06_missing_orders_61_66.py` extends the reconstruction to all
+   intermediate orders between `m = 60` and `m = 67`, demonstrating
+   that the reconstructed spectral traces continuously fill the gap
+   between the two original Zemax orders.
+
+7. `07_all_orders_11_wavelengths.py` applies the validated reconstruction
+   procedure to the complete integer order sequence from `m = 60` to
+   `m = 144`. All 85 orders are traced using their 11 reference
+   wavelengths at the final image plane, providing the final validation
+   step before dense wavelength sampling.
 
 
 ### `utils/`
@@ -119,24 +154,32 @@ scripts.
 
 - `emar_utils.py` contains project paths, pupil-sampling routines,
   PyZDDE ray-tracing functions, multi-configuration tracing tools, and
-  spectral-centroid calculations.
+  reusable functions for tracing original and reconstructed echelle
+  diffraction orders while preserving and restoring the original MCE
+  state.
 
-- `emar_plots.py` contains the visualization routines for pupil
-  sampling, footprints, spectral traces, and detector-style
-  representations.
-
-Keeping these functions separate from the analysis scripts avoids code
-duplication and provides a common implementation for all ray-tracing
-experiments.
-
+- `emar_plots.py` contains reusable visualization routines for pupil
+  sampling, multi-configuration footprints, and the complete echelle
+  spectral format. Echelle-order results can be displayed as full ray
+  footprints, centroid spectral traces, or detector-style
+  representations. Scientific echelle views use a continuous
+  diffraction-order color scale, with lower orders represented toward
+  red and higher orders toward blue.
 
 ### `Results/`
 
-Contains compact numerical products generated by the analysis.
+Contains compact numerical products generated by the analysis. The current 
+`echelle_orders_60_144.csv` file provides the master spectral definition 
+for the complete integer echelle-order sequence from `m = 60` to `m = 144`.
+For each of the 85 diffraction orders, the table stores:
 
-The current `echelle_orders_60_144.csv` file contains the reconstructed
-wavelength table for the complete sequence of echelle diffraction
-orders from `m = 60` to `m = 144`.
+- the diffraction-order number;
+- its status as `ORIGINAL` or `NEW`; and
+- the 11 reference wavelengths associated with that order.
+
+The table is generated by `EMAR_missing_orders.py` and subsequently
+used by `EMAR_full_orders.py` as the input definition for dense
+wavelength sampling and full-order ray tracing.
 
 Generated PNG and PDF figures are excluded from version control because
 they can be reproduced directly from the analysis scripts.
@@ -225,27 +268,60 @@ in Python for subsequent analysis and visualization. Conceptually,
 the complete multi-configuration analysis follows:
 
     Configuration 1
-        ├── wavelength 1   -> pupil sample -> ray tracing
-        ├── wavelength 2   -> pupil sample -> ray tracing
+        ├──> wavelength 1   -> pupil sample -> ray tracing
+        ├──> wavelength 2   -> pupil sample -> ray tracing
         ├── ...
-        └── wavelength 100 -> pupil sample -> ray tracing
+        └──> wavelength 100 -> pupil sample -> ray tracing
 
     Configuration 2
-        ├── wavelength 1   -> pupil sample -> ray tracing
-        ├── wavelength 2   -> pupil sample -> ray tracing
+        ├──> wavelength 1   -> pupil sample -> ray tracing
+        ├──> wavelength 2   -> pupil sample -> ray tracing
         ├── ...
-        └── wavelength 100 -> pupil sample -> ray tracing
+        └──> wavelength 100 -> pupil sample -> ray tracing
 
         ...
 
     Configuration 13
-        ├── wavelength 1   -> pupil sample -> ray tracing
-        ├── wavelength 2   -> pupil sample -> ray tracing
+        ├──> wavelength 1   -> pupil sample -> ray tracing
+        ├──> wavelength 2   -> pupil sample -> ray tracing
         ├── ...
-        └── wavelength 100 -> pupil sample -> ray tracing
+        └──> wavelength 100 -> pupil sample -> ray tracing
 
 After the sampled wavelengths of a configuration have been traced, the
 original `WAVE 1` value is restored in the MCE and the model is updated
 again with `zGetUpdate()` before proceeding to the next configuration.
 This restoration prevents temporary wavelength modifications from
 affecting subsequent configurations or analyses.
+
+### Complete order tracing
+
+The workflow extends the original configuration-based
+procedure to every integer diffraction order from `m = 60` to
+`m = 144`. The spectral definition of these orders is not recalculated during the
+dense ray-tracing stage. Instead, `EMAR_full_orders.py` reads the
+validated `echelle_orders_60_144.csv` table produced by
+`EMAR_missing_orders.py`.
+
+For each order:
+
+1. Read the order number, reconstruction status, and 11 reference
+   wavelengths from the CSV table.
+2. Use the first and last reference wavelengths to define the spectral
+   interval of the order.
+3. Generate a dense set of equally spaced wavelengths across this
+   interval.
+4. Select the appropriate original Zemax configuration as the optical
+   template.
+5. Temporarily assign the required diffraction order and wavelength
+   through the MCE.
+6. Trace the common normalized-pupil sample to the selected optical
+   surface.
+7. Restore the original diffraction-order and wavelength values before
+   continuing.
+
+The procedure therefore reconstructs the spectral parameters required
+by Zemax rather than interpolating detector coordinates. The X-Y
+positions of the reconstructed orders are obtained directly from ray
+tracing through the optical model. For the current dense analysis, 100 
+wavelengths are sampled for each of the 85 diffraction orders, 
+with 100 normalized pupil rays traced at each wavelength.
