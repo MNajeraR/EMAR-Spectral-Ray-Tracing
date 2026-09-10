@@ -1293,5 +1293,211 @@ def trace_reconstructed_order(
         "spots": spots
     }
 
+##############################################################
+# Trace one echelle order at arbitrary wavelengths
+##############################################################
+
+def trace_echelle_order(
+    ln,
+    base_config,
+    target_order,
+    wavelengths,
+    surf,
+    px,
+    py,
+    row_order,
+    row_wave1
+):
+    """
+    Trace one echelle diffraction order at an arbitrary set of
+    wavelengths.
+
+    The selected Zemax configuration is used as a template. The
+    diffraction order and WAVE 1 MCE entries are temporarily modified
+    for the requested order and wavelengths.
+
+    The original MCE values are always restored before returning.
+
+    Parameters
+    ----------
+    ln : PyZDDE link
+        Active Zemax DDE connection.
+
+    base_config : int
+        Zemax configuration used as the optical template.
+
+    target_order : int
+        Echelle diffraction order to trace.
+
+    wavelengths : array_like
+        Wavelengths in micrometers.
+
+    surf : int
+        Zemax surface where rays are evaluated.
+
+    px, py : array_like
+        Normalized pupil coordinates.
+
+    row_order : int
+        MCE row controlling the echelle diffraction order.
+
+    row_wave1 : int
+        MCE row controlling WAVE 1.
+
+    Returns
+    -------
+    result : dict
+        Dictionary containing the diffraction order, wavelengths,
+        and ray footprints.
+    """
+
+    ##########################################################
+    # Select template configuration
+    ##########################################################
+
+    ln.zSetConfig(
+        base_config
+    )
+
+    ln.zGetUpdate()
+
+
+    ##########################################################
+    # Save original MCE values
+    ##########################################################
+
+    original_order = ln.zGetMulticon(
+        base_config,
+        row_order
+    )
+
+    original_wave1 = ln.zGetMulticon(
+        base_config,
+        row_wave1
+    )
+
+
+    spots = {}
+
+
+    try:
+
+        ######################################################
+        # Set diffraction order
+        ######################################################
+
+        ln.zSetMulticon(
+            base_config,
+            row_order,
+            float(target_order),
+            original_order.status,
+            original_order.pickupRow,
+            original_order.pickupConfig,
+            original_order.scale,
+            original_order.offset
+        )
+
+        ln.zGetUpdate()
+
+
+        ######################################################
+        # Trace requested wavelengths
+        ######################################################
+
+        for wavelength in wavelengths:
+
+            ln.zSetMulticon(
+                base_config,
+                row_wave1,
+                float(wavelength),
+                original_wave1.status,
+                original_wave1.pickupRow,
+                original_wave1.pickupConfig,
+                original_wave1.scale,
+                original_wave1.offset
+            )
+
+            ln.zGetUpdate()
+
+
+            wave_zemax = ln.zGetWave(
+                1
+            ).wavelength
+
+
+            x, y = trace_pupil(
+                ln=ln,
+                wave_num=1,
+                surf=surf,
+                px=px,
+                py=py,
+                hx=0.0,
+                hy=0.0
+            )
+
+
+            spots[
+                float(wavelength)
+            ] = {
+                "x": x.copy(),
+                "y": y.copy()
+            }
+
+
+            if len(x) != len(px):
+
+                print(
+                    f"\nWarning: "
+                    f"m={target_order}, "
+                    f"lambda={wave_zemax:.9f} um | "
+                    f"{len(x)}/{len(px)} valid rays"
+                )
+
+
+    finally:
+
+        ######################################################
+        # Restore original wavelength
+        ######################################################
+
+        ln.zSetMulticon(
+            base_config,
+            row_wave1,
+            original_wave1.value,
+            original_wave1.status,
+            original_wave1.pickupRow,
+            original_wave1.pickupConfig,
+            original_wave1.scale,
+            original_wave1.offset
+        )
+
+
+        ######################################################
+        # Restore original diffraction order
+        ######################################################
+
+        ln.zSetMulticon(
+            base_config,
+            row_order,
+            original_order.value,
+            original_order.status,
+            original_order.pickupRow,
+            original_order.pickupConfig,
+            original_order.scale,
+            original_order.offset
+        )
+
+
+        ln.zGetUpdate()
+
+
+    return {
+        "order": target_order,
+        "wavelengths": np.asarray(
+            wavelengths
+        ).copy(),
+        "spots": spots
+    }
+
 
 
