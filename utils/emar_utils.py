@@ -1297,7 +1297,7 @@ def trace_reconstructed_order(
 # Trace one echelle order at arbitrary wavelengths
 ##############################################################
 
-def trace_echelle_order(
+def trace_all_order(
     ln,
     base_config,
     target_order,
