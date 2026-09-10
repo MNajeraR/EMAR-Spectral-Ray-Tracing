@@ -1341,19 +1341,19 @@ def plot_echelle_orders(
     if view_mode == "scatter":
 
         title = (
-            f"Complete echelle footprint - Surface {surf}"
+            f"Complete footprint - Surface {surf}"
         )
 
     elif view_mode == "spectral_trace":
 
         title = (
-            f"Complete echelle spectral format - Surface {surf}"
+            f"Complete spectral format - Surface {surf}"
         )
 
     else:
 
         title = (
-            f"Detector echelle spectral format - Surface {surf}"
+            f"Detector spectral format - Surface {surf}"
         )
 
 
@@ -1400,7 +1400,7 @@ def plot_echelle_orders(
 
 
         cbar.set_label(
-            "Echelle diffraction order m",
+            "Diffraction order m",
             fontsize=12
         )
 
@@ -1456,19 +1456,19 @@ def plot_echelle_orders(
             if view_mode == "scatter":
 
                 filename = (
-                    f"Echelle_footprint_surf{surf}"
+                    f"Footprint_surf{surf}"
                 )
 
             elif view_mode == "spectral_trace":
 
                 filename = (
-                    f"Echelle_spectral_trace_surf{surf}"
+                    f"Spectral_trace_surf{surf}"
                 )
 
             else:
 
                 filename = (
-                    f"Echelle_detector_surf{surf}"
+                    f"Detector_surf{surf}"
                 )
 
 
