@@ -1202,25 +1202,6 @@ def trace_reconstructed_order(
 
 
         ######################################################
-        # Verify order
-        ######################################################
-
-        order_zemax = ln.zGetMulticon(
-            base_config,
-            row_order
-        ).value
-
-
-        print(
-            f"\nOrder m = {target_order}"
-        )
-
-        print(
-            f"Zemax PRAM = {order_zemax:.0f}"
-        )
-
-
-        ######################################################
         # Trace reconstructed wavelengths
         ######################################################
 
@@ -1246,7 +1227,7 @@ def trace_reconstructed_order(
             ).wavelength
 
 
-            x, y = emar_utils.trace_pupil(
+            x, y = trace_pupil(
                 ln=ln,
                 wave_num=1,
                 surf=surf,
