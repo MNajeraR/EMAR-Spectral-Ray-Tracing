@@ -1015,3 +1015,479 @@ def plot_pupil_sampling(
 
 
     return fig, ax
+
+##############################################################
+# Plot complete echelle order format
+##############################################################
+
+def plot_echelle_orders(
+    spots_by_order,
+    surf,
+    figsize=(11, 8),
+    point_size=2,
+    alpha=0.35,
+    view_mode="scatter",
+    linewidth=1.0,
+    detector_alpha=1.0,
+    cmap_name="turbo_r",
+    save=False,
+    results_dir=RESULTS_DIR,
+    file_format="png",
+    filename=None,
+    dpi=300,
+    show=True
+):
+    """
+    Plot the complete EMAR echelle order sequence using one of
+    three visualization modes.
+
+    Available modes
+    ---------------
+
+    ``view_mode="scatter"``
+        Display all valid ray intersections for every sampled
+        wavelength and diffraction order.
+
+    ``view_mode="spectral_trace"``
+        Calculate the centroid of each wavelength footprint and
+        connect consecutive centroid positions to represent the
+        spectral trace of each diffraction order.
+
+    ``view_mode="detector"``
+        Display the same centroid traces as white lines on a black
+        background, providing a simplified detector representation
+        of the complete spectral format.
+
+    The diffraction-order color convention is:
+
+        low order  -> red
+        high order -> blue
+
+    Parameters
+    ----------
+    spots_by_order : dict
+        Ray-tracing results indexed by diffraction order.
+
+        Expected structure:
+
+            spots_by_order[order]["wavelengths"]
+            spots_by_order[order]["spots"][wavelength]["x"]
+            spots_by_order[order]["spots"][wavelength]["y"]
+
+    surf : int
+        Zemax surface represented by the plot.
+
+    figsize : tuple, optional
+        Figure size in inches.
+
+    point_size : float, optional
+        Marker size used in scatter mode.
+
+    alpha : float, optional
+        Marker transparency used in scatter mode.
+
+    view_mode : {"scatter", "spectral_trace", "detector"}, optional
+        Visualization mode.
+
+    linewidth : float, optional
+        Width of the spectral traces.
+
+    detector_alpha : float, optional
+        Opacity of detector traces.
+
+    cmap_name : str, optional
+        Continuous colormap used to represent diffraction order.
+
+    save : bool, optional
+        Save figure if True.
+
+    results_dir : str or pathlib.Path, optional
+        Output directory.
+
+    file_format : {"png", "pdf", "both"}, optional
+        Output format.
+
+    filename : str, optional
+        Base filename used when saving.
+
+    dpi : int, optional
+        Raster-image resolution.
+
+    show : bool, optional
+        Display figure if True.
+
+    Returns
+    -------
+    fig, ax
+        Matplotlib figure and axes.
+    """
+
+    ##########################################################
+    # Validate visualization mode
+    ##########################################################
+
+    valid_modes = [
+        "scatter",
+        "spectral_trace",
+        "detector"
+    ]
+
+
+    if view_mode not in valid_modes:
+
+        raise ValueError(
+            "Unknown view_mode: "
+            f"{view_mode}. "
+            "Available modes are "
+            "'scatter', 'spectral_trace', and 'detector'."
+        )
+
+
+    ##########################################################
+    # Create figure
+    ##########################################################
+
+    fig, ax = plt.subplots(
+        figsize=figsize
+    )
+
+
+    ##########################################################
+    # Diffraction orders
+    ##########################################################
+
+    orders = np.asarray(
+        sorted(
+            spots_by_order.keys()
+        ),
+        dtype=int
+    )
+
+
+    ##########################################################
+    # Continuous order colormap
+    ##########################################################
+
+    cmap = plt.get_cmap(
+        cmap_name
+    )
+
+
+    norm = plt.Normalize(
+        orders.min(),
+        orders.max()
+    )
+
+
+    ##########################################################
+    # Detector appearance
+    ##########################################################
+
+    if view_mode == "detector":
+
+        ax.set_facecolor(
+            "black"
+        )
+
+        fig.patch.set_facecolor(
+            "black"
+        )
+
+
+    ##########################################################
+    # Loop over diffraction orders
+    ##########################################################
+
+    for order in orders:
+
+        order = int(
+            order
+        )
+
+
+        wavelengths = spots_by_order[
+            order
+        ]["wavelengths"]
+
+
+        spots_by_wave = spots_by_order[
+            order
+        ]["spots"]
+
+
+        ######################################################
+        # Order color
+        ######################################################
+
+        if view_mode == "detector":
+
+            color = "white"
+
+        else:
+
+            color = cmap(
+                norm(order)
+            )
+
+
+        ######################################################
+        # Scientific footprint
+        ######################################################
+
+        if view_mode == "scatter":
+
+            for wavelength in wavelengths:
+
+                spot = spots_by_wave[
+                    float(wavelength)
+                ]
+
+
+                x = spot[
+                    "x"
+                ]
+
+                y = spot[
+                    "y"
+                ]
+
+
+                ax.scatter(
+                    x,
+                    y,
+                    s=point_size,
+                    color=color,
+                    alpha=alpha,
+                    linewidths=0
+                )
+
+
+        ######################################################
+        # Spectral trace
+        ######################################################
+
+        elif view_mode == "spectral_trace":
+
+            xc, yc = get_centroid_trace(
+                wavelengths=wavelengths,
+                spots_by_wave=spots_by_wave
+            )
+
+
+            ax.plot(
+                xc,
+                yc,
+                "-",
+                color=color,
+                linewidth=linewidth
+            )
+
+
+        ######################################################
+        # Detector view
+        ######################################################
+
+        elif view_mode == "detector":
+
+            xc, yc = get_centroid_trace(
+                wavelengths=wavelengths,
+                spots_by_wave=spots_by_wave
+            )
+
+
+            ax.plot(
+                xc,
+                yc,
+                "-",
+                color="white",
+                linewidth=linewidth,
+                alpha=detector_alpha
+            )
+
+
+    ##########################################################
+    # Axis labels
+    ##########################################################
+
+    if view_mode == "spectral_trace":
+
+        ax.set_xlabel(
+            "X centroid [mm]",
+            fontsize=14
+        )
+
+        ax.set_ylabel(
+            "Y centroid [mm]",
+            fontsize=14
+        )
+
+    else:
+
+        ax.set_xlabel(
+            "X [mm]",
+            fontsize=14
+        )
+
+        ax.set_ylabel(
+            "Y [mm]",
+            fontsize=14
+        )
+
+
+    ##########################################################
+    # Title
+    ##########################################################
+
+    if view_mode == "scatter":
+
+        title = (
+            f"Complete echelle footprint - Surface {surf}"
+        )
+
+    elif view_mode == "spectral_trace":
+
+        title = (
+            f"Complete echelle spectral format - Surface {surf}"
+        )
+
+    else:
+
+        title = (
+            f"Detector echelle spectral format - Surface {surf}"
+        )
+
+
+    ax.set_title(
+        title,
+        fontsize=15
+    )
+
+
+    ##########################################################
+    # Scientific-view formatting
+    ##########################################################
+
+    if view_mode in [
+        "scatter",
+        "spectral_trace"
+    ]:
+
+        ax.tick_params(
+            axis="both",
+            labelsize=12
+        )
+
+
+        ######################################################
+        # Diffraction-order colorbar
+        ######################################################
+
+        sm = plt.cm.ScalarMappable(
+            norm=norm,
+            cmap=cmap
+        )
+
+
+        sm.set_array(
+            []
+        )
+
+
+        cbar = fig.colorbar(
+            sm,
+            ax=ax
+        )
+
+
+        cbar.set_label(
+            "Echelle diffraction order m",
+            fontsize=12
+        )
+
+
+    ##########################################################
+    # Detector formatting
+    ##########################################################
+
+    elif view_mode == "detector":
+
+        ax.xaxis.label.set_color(
+            "white"
+        )
+
+        ax.yaxis.label.set_color(
+            "white"
+        )
+
+        ax.title.set_color(
+            "white"
+        )
+
+
+        ax.tick_params(
+            axis="both",
+            colors="white",
+            labelsize=12
+        )
+
+
+        for spine in ax.spines.values():
+
+            spine.set_color(
+                "white"
+            )
+
+
+    ##########################################################
+    # Layout
+    ##########################################################
+
+    fig.tight_layout()
+
+
+    ##########################################################
+    # Save
+    ##########################################################
+
+    if save:
+
+        if filename is None:
+
+            if view_mode == "scatter":
+
+                filename = (
+                    f"Echelle_footprint_surf{surf}"
+                )
+
+            elif view_mode == "spectral_trace":
+
+                filename = (
+                    f"Echelle_spectral_trace_surf{surf}"
+                )
+
+            else:
+
+                filename = (
+                    f"Echelle_detector_surf{surf}"
+                )
+
+
+        save_figure(
+            fig=fig,
+            filename=filename,
+            results_dir=results_dir,
+            file_format=file_format,
+            dpi=dpi
+        )
+
+
+    ##########################################################
+    # Display
+    ##########################################################
+
+    if show:
+
+        plt.show()
+
+
+    return fig, ax
