@@ -548,3 +548,35 @@ ax.tick_params(
 plt.tight_layout()
 plt.show()
 
+##############################################################
+# Plot reciprocal linear dispersion
+##############################################################
+
+fig, ax = plt.subplots(
+    figsize=(8, 5)
+)
+
+
+ax.plot(
+    valid_wavelengths,
+    reciprocal_dispersion_nm
+)
+
+
+ax.set_xlabel(
+    r"$\mathrm{Wavelength}\;(\mu\mathrm{m})$",
+    fontsize=16
+)
+
+ax.set_ylabel(
+    r"$d\lambda/ds\;(\mathrm{nm}/\mathrm{mm})$",
+    fontsize=16
+)
+
+ax.tick_params(
+    axis="both",
+    labelsize=16
+)
+
+plt.tight_layout()
+plt.show()
