@@ -739,14 +739,24 @@ spot = order_data[
     "spots"
 ][wavelength]
 
-x_plot = np.asarray(
+x = np.asarray(
     spot["x"],
     dtype=float
 )
 
-y_plot = np.asarray(
+y = np.asarray(
     spot["y"],
     dtype=float
+)
+
+
+# Move the monochromatic spot centroid to (0, 0).
+delta_x = (
+    x - x_centroid[plot_index]
+)
+
+delta_y = (
+    y - y_centroid[plot_index]
 )
 
 
@@ -755,21 +765,23 @@ fig, ax = plt.subplots(
 )
 
 ax.scatter(
-    x_plot,
-    y_plot,
+    delta_x * 1000,
+    delta_y * 1000,
     s=8,
     color="black"
 )
 
 ax.set_xlabel(
-    r"$X\;(\mathrm{mm})$",
+    r"$\Delta X\;(\mu\mathrm{m})$",
     fontsize=18
 )
 
 ax.set_ylabel(
-    r"$Y\;(\mathrm{mm})$",
+    r"$\Delta Y\;(\mu\mathrm{m})$",
     fontsize=18
 )
+
+ax.minorticks_on()
 
 ax.tick_params(
     which="major",
@@ -779,6 +791,15 @@ ax.tick_params(
     length=6,
     width=2.2,
     labelsize=16
+)
+
+ax.tick_params(
+    which="minor",
+    direction="in",
+    top=True,
+    right=True,
+    length=3,
+    width=1.2
 )
 
 ax.set_aspect(
@@ -857,32 +878,41 @@ fig, ax = plt.subplots(
 
 ax.plot(
     valid_wavelengths*1000,
-    spectral_purity_nm
+    spectral_purity_nm*1000, 
+    color="black",
+    linewidth=2.0
 )
 
 
 ax.set_xlabel(
     r"$\mathrm{Wavelength}\;(\mathrm{nm})$",
-    fontsize=16
+    fontsize=18
 )
 
 ax.set_ylabel(
-    r"$\delta\lambda\;(\mathrm{nm})$",
-    fontsize=16
+    r"$\delta\lambda\;(\mathrm{pm})$",
+    fontsize=18
 )
-
-# ax.tick_params(
-#     axis="both",
-#     labelsize=16
-# )
 
 ax.minorticks_on()
 
 ax.tick_params(
-    which="both",
+    which="major",
     direction="in",
     top=True,
-    right=True
+    right=True,
+    length=6,
+    width=2.2,
+    labelsize=16
+)
+
+ax.tick_params(
+    which="minor",
+    direction="in",
+    top=True,
+    right=True,
+    length=3,
+    width=1.2
 )
 
 plt.tight_layout()
@@ -898,22 +928,40 @@ fig, ax = plt.subplots(
 
 ax.plot(
     valid_wavelengths * 1000.0,
-    omega_prime * 1000.0
+    omega_prime * 1000.0, 
+    color="black",
+    linewidth=2.0
 )
 
 ax.set_xlabel(
     r"$\mathrm{Wavelength}\;(\mathrm{nm})$",
-    fontsize=16
+    fontsize=18
 )
 
 ax.set_ylabel(
     r"$\omega'\;(\mu\mathrm{m})$",
-    fontsize=16
+    fontsize=18
+)
+
+ax.minorticks_on()
+
+ax.tick_params(
+    which="major",
+    direction="in",
+    top=True,
+    right=True,
+    length=6,
+    width=2.2,
+    labelsize=16
 )
 
 ax.tick_params(
-    axis="both",
-    labelsize=16
+    which="minor",
+    direction="in",
+    top=True,
+    right=True,
+    length=3,
+    width=1.2
 )
 
 plt.tight_layout()
@@ -933,6 +981,16 @@ resolving_power = (
     / spectral_purity_nm
 )
 
+exponent = int(
+    np.floor(
+        np.log10(
+            np.max(resolving_power)
+        )
+    )
+)
+
+scale = 10**exponent
+
 print()
 
 print(
@@ -941,6 +999,7 @@ print(
 print(
     f"    {np.max(resolving_power):.2f}"
 )
+
 ##############################################################
 # Plot resolving power
 ##############################################################
@@ -951,22 +1010,40 @@ fig, ax = plt.subplots(
 
 ax.plot(
     wavelengths_nm,
-    resolving_power
+    resolving_power / scale,
+    color="black",
+    linewidth=2.0
 )
 
 ax.set_xlabel(
     r"$\mathrm{Wavelength}\;(\mathrm{nm})$",
-    fontsize=16
+    fontsize=18
 )
 
 ax.set_ylabel(
-    r"$R=\lambda/\delta\lambda$",
-    fontsize=16
+    rf"$R\;(10^{{{exponent}}})$",
+    fontsize=18
+)
+
+ax.minorticks_on()
+
+ax.tick_params(
+    which="major",
+    direction="in",
+    top=True,
+    right=True,
+    length=6,
+    width=2.2,
+    labelsize=16
 )
 
 ax.tick_params(
-    axis="both",
-    labelsize=16
+    which="minor",
+    direction="in",
+    top=True,
+    right=True,
+    length=3,
+    width=1.2
 )
 
 plt.tight_layout()
