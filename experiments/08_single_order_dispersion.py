@@ -523,53 +523,53 @@ plt.show()
 # Plot spectral coordinate versus wavelength
 ##############################################################
 
-fig, ax = plt.subplots(
-    figsize=(8, 5)
-)
+# fig, ax = plt.subplots(
+#     figsize=(8, 5)
+# )
 
 
-ax.plot(
-    valid_wavelengths,
-    s,
-    color="black",
-    linewidth=2.0
-)
+# ax.plot(
+#     valid_wavelengths,
+#     s,
+#     color="black",
+#     linewidth=2.0
+# )
 
 
-ax.set_xlabel(
-    r"$\mathrm{Wavelength}\;(\mu\mathrm{m})$",
-    fontsize=18
-)
+# ax.set_xlabel(
+#     r"$\mathrm{Wavelength}\;(\mu\mathrm{m})$",
+#     fontsize=18
+# )
 
-ax.set_ylabel(
-    r"$\mathrm{Spectral coordinate}\;(\mathrm{s})\;[\mathrm{mm}]$",
-    fontsize=18
-)
+# ax.set_ylabel(
+#     r"$\mathrm{Spectral coordinate}\;(\mathrm{s})\;[\mathrm{mm}]$",
+#     fontsize=18
+# )
 
 
-ax.minorticks_on()
+# ax.minorticks_on()
 
-ax.tick_params(
-    which="major",
-    direction="in",
-    top=True,
-    right=True,
-    length=6,
-    width=2.2,
-    labelsize=16
-)
+# ax.tick_params(
+#     which="major",
+#     direction="in",
+#     top=True,
+#     right=True,
+#     length=6,
+#     width=2.2,
+#     labelsize=16
+# )
 
-ax.tick_params(
-    which="minor",
-    direction="in",
-    top=True,
-    right=True,
-    length=3,
-    width=1.2
-)
+# ax.tick_params(
+#     which="minor",
+#     direction="in",
+#     top=True,
+#     right=True,
+#     length=3,
+#     width=1.2
+# )
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+# plt.show()
 
 
 ##############################################################
@@ -822,7 +822,7 @@ plt.show()
 #
 # This corresponds to the maximum geometrical width of the
 # monochromatic image in the spectral direction.
-omega_prime = (
+omega_prime_dis = (
     np.max(u, axis=1)
     - np.min(u, axis=1)
 )
@@ -833,7 +833,7 @@ print(
     "Mean geometrical width:"
 )
 print(
-    f"    {np.mean(omega_prime)*1000:.6f} um"
+    f"    {np.mean(omega_prime_dis)*1000:.6f} um"
 )
 
 
@@ -854,7 +854,7 @@ print(
 # omega_prime is in mm and reciprocal_dispersion_nm is in nm/mm,
 # therefore spectral_purity_nm is obtained in nm.
 spectral_purity_nm = (
-    omega_prime
+    omega_prime_dis
     * reciprocal_dispersion_nm
 )
 
@@ -928,7 +928,7 @@ fig, ax = plt.subplots(
 
 ax.plot(
     valid_wavelengths * 1000.0,
-    omega_prime * 1000.0, 
+    omega_prime_dis * 1000.0, 
     color="black",
     linewidth=2.0
 )
