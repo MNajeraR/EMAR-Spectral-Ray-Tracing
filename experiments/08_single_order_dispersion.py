@@ -345,9 +345,113 @@ reciprocal_dispersion_nm = (
     * reciprocal_dispersion_um
 )
 
+##############################################################
+# Save spectral-dispersion results
+##############################################################
 
+dispersion_file = (
+    emar_utils.RESULTS_DIR
+    / f"order_{target_order}_dispersion.csv"
+)
 
+dispersion_data = np.column_stack(
+    (
+        valid_wavelengths * 1000.0,
+        x_centroid,
+        y_centroid,
+        s,
+        linear_dispersion,
+        reciprocal_dispersion_nm
+    )
+)
 
+np.savetxt(
+    dispersion_file,
+    dispersion_data,
+    delimiter=",",
+    header=(
+        "wavelength_nm,"
+        "x_centroid_mm,"
+        "y_centroid_mm,"
+        "s_mm,"
+        "linear_dispersion_mm_per_um,"
+        "reciprocal_dispersion_nm_per_mm"
+    ),
+    comments=""
+)
+
+##############################################################
+# Save individual image-plane rays
+##############################################################
+
+rays_file = (
+    emar_utils.RESULTS_DIR
+    / f"order_{target_order}_rays.csv"
+)
+
+ray_rows = []
+
+for wavelength in valid_wavelengths:
+
+    wavelength = float(
+        wavelength
+    )
+
+    spot = order_data[
+        "spots"
+    ][wavelength]
+
+    x = np.asarray(
+        spot["x"],
+        dtype=float
+    )
+
+    y = np.asarray(
+        spot["y"],
+        dtype=float
+    )
+
+    for ray_id, (x_i, y_i) in enumerate(
+        zip(x, y)
+    ):
+    
+        ray_rows.append(
+            (
+                wavelength * 1000.0,
+                ray_id,
+                px[ray_id],
+                py[ray_id],
+                x_i,
+                y_i
+            )
+        )
+
+ray_rows = np.asarray(
+    ray_rows
+)
+
+np.savetxt(
+    rays_file,
+    ray_rows,
+    delimiter=",",
+    header=(
+        "wavelength_nm,"
+        "ray_id,"
+        "px,"
+        "py,"
+        "x_mm,"
+        "y_mm"
+    ),
+    comments="",
+    fmt=[
+        "%.9f",
+        "%d",
+        "%.12f",
+        "%.12f",
+        "%.12f",
+        "%.12f"
+    ]
+)
 
 ##############################################################
 # Print experiment summary
@@ -572,427 +676,3 @@ ax.tick_params(
 plt.tight_layout()
 plt.show()
 
-
-##############################################################
-# Spot projection onto the local spectral direction
-##############################################################
-
-# Compute the wavelength derivatives of the spectral centroid.
-# Together, dx/dlambda and dy/dlambda define the local tangent
-# direction of the spectral trace on the image plane.
-dx_dlambda = np.gradient(
-    x_centroid,
-    valid_wavelengths
-)
-
-dy_dlambda = np.gradient(
-    y_centroid,
-    valid_wavelengths
-)
-
-
-# Normalize the centroid derivative vector by the local linear
-# dispersion ds/dlambda. The resulting components (tx, ty)
-# define a unit tangent vector along the local direction of
-# spectral dispersion.
-tx = (
-    dx_dlambda
-    / linear_dispersion
-)
-
-ty = (
-    dy_dlambda
-    / linear_dispersion
-)
-
-
-# Project each monochromatic spot onto its local spectral
-# direction. For every wavelength, the ray coordinates are
-# first expressed relative to the corresponding centroid and
-# then projected onto the unit tangent vector.
-#
-# The resulting coordinate u measures the displacement of each
-# ray along the local dispersion direction, in mm.
-u = []
-
-for i in range(len(valid_wavelengths)):
-
-    wavelength = valid_wavelengths[i]
-
-    spot = order_data[
-        "spots"
-    ][float(wavelength)]
-
-    x = np.asarray(
-        spot["x"],
-        dtype=float
-    )
-
-    y = np.asarray(
-        spot["y"],
-        dtype=float
-    )
-
-
-    # Monochromatic spot centroid.
-    xc = x_centroid[i]
-    yc = y_centroid[i]
-
-
-    # Ray positions relative to the spot centroid.
-    delta_x = x - xc
-    delta_y = y - yc
-
-
-    # Projection onto the local spectral direction:
-    #
-    #     u = delta_r . t_hat
-    #
-    # where delta_r = (delta_x, delta_y) and
-    # t_hat = (tx, ty).
-    u_i = (
-        delta_x * tx[i]
-        + delta_y * ty[i]
-    )
-
-    u.append(
-        u_i
-    )
-
-
-# Array shape:
-#
-#     (number of wavelengths, number of pupil rays)
-#
-# Each row therefore represents the projected monochromatic
-# footprint for one wavelength.
-u = np.asarray(
-    u
-)
-
-##############################################################
-# Diagnostic plot of one projected monochromatic spot
-##############################################################
-
-plot_index = (
-    len(valid_wavelengths)
-    // 2
-)
-
-wavelength = float(
-    valid_wavelengths[plot_index]
-)
-
-spot = order_data[
-    "spots"
-][wavelength]
-
-x = np.asarray(
-    spot["x"],
-    dtype=float
-)
-
-y = np.asarray(
-    spot["y"],
-    dtype=float
-)
-
-
-# Move the monochromatic spot centroid to (0, 0).
-delta_x = (
-    x - x_centroid[plot_index]
-)
-
-delta_y = (
-    y - y_centroid[plot_index]
-)
-
-
-fig, ax = plt.subplots(
-    figsize=(7, 7)
-)
-
-ax.scatter(
-    delta_x * 1000,
-    delta_y * 1000,
-    s=8,
-    color="black"
-)
-
-ax.set_xlabel(
-    r"$\Delta X\;(\mu\mathrm{m})$",
-    fontsize=18
-)
-
-ax.set_ylabel(
-    r"$\Delta Y\;(\mu\mathrm{m})$",
-    fontsize=18
-)
-
-ax.minorticks_on()
-
-ax.tick_params(
-    which="major",
-    direction="in",
-    top=True,
-    right=True,
-    length=6,
-    width=2.2,
-    labelsize=16
-)
-
-ax.tick_params(
-    which="minor",
-    direction="in",
-    top=True,
-    right=True,
-    length=3,
-    width=1.2
-)
-
-ax.set_aspect(
-    "equal"
-)
-
-plt.tight_layout()
-plt.show()
-
-##############################################################
-# Effective spectral image width
-##############################################################
-
-# In the absence of an explicit entrance slit in the Zemax
-# model, the full aberrational extent of each monochromatic
-# footprint along the local dispersion direction is adopted
-# as an effective slit-image width:
-#
-#     omega' = u_max - u_min
-#
-# This corresponds to the maximum geometrical width of the
-# monochromatic image in the spectral direction.
-omega_prime_dis = (
-    np.max(u, axis=1)
-    - np.min(u, axis=1)
-)
-
-print()
-
-print(
-    "Mean geometrical width:"
-)
-print(
-    f"    {np.mean(omega_prime_dis)*1000:.6f} um"
-)
-
-
-##############################################################
-# Spectral purity
-##############################################################
-
-# Following the adopted spectral-purity criterion, Delta lambda
-# is the wavelength interval for which the spectral displacement
-# equals the effective image width omega':
-#
-#     delta l = omega'
-#
-# Since d(lambda)/ds is the reciprocal linear dispersion,
-#
-#     Delta lambda = omega' * d(lambda)/ds
-#
-# omega_prime is in mm and reciprocal_dispersion_nm is in nm/mm,
-# therefore spectral_purity_nm is obtained in nm.
-spectral_purity_nm = (
-    omega_prime_dis
-    * reciprocal_dispersion_nm
-)
-
-print()
-
-print(
-    "Mean spectral purity:"
-)
-print(
-    f"    {np.mean(spectral_purity_nm):.6f} nm"
-)
-
-##############################################################
-# Plot spectral purity
-##############################################################
-
-fig, ax = plt.subplots(
-    figsize=(8, 5)
-)
-
-
-ax.plot(
-    valid_wavelengths*1000,
-    spectral_purity_nm*1000, 
-    color="black",
-    linewidth=2.0
-)
-
-
-ax.set_xlabel(
-    r"$\mathrm{Wavelength}\;(\mathrm{nm})$",
-    fontsize=18
-)
-
-ax.set_ylabel(
-    r"$\delta\lambda\;(\mathrm{pm})$",
-    fontsize=18
-)
-
-ax.minorticks_on()
-
-ax.tick_params(
-    which="major",
-    direction="in",
-    top=True,
-    right=True,
-    length=6,
-    width=2.2,
-    labelsize=16
-)
-
-ax.tick_params(
-    which="minor",
-    direction="in",
-    top=True,
-    right=True,
-    length=3,
-    width=1.2
-)
-
-plt.tight_layout()
-plt.show()
-
-##############################################################
-# Plot effective spectral image width
-##############################################################
-
-fig, ax = plt.subplots(
-    figsize=(8, 5)
-)
-
-ax.plot(
-    valid_wavelengths * 1000.0,
-    omega_prime_dis * 1000.0, 
-    color="black",
-    linewidth=2.0
-)
-
-ax.set_xlabel(
-    r"$\mathrm{Wavelength}\;(\mathrm{nm})$",
-    fontsize=18
-)
-
-ax.set_ylabel(
-    r"$\omega'\;(\mu\mathrm{m})$",
-    fontsize=18
-)
-
-ax.minorticks_on()
-
-ax.tick_params(
-    which="major",
-    direction="in",
-    top=True,
-    right=True,
-    length=6,
-    width=2.2,
-    labelsize=16
-)
-
-ax.tick_params(
-    which="minor",
-    direction="in",
-    top=True,
-    right=True,
-    length=3,
-    width=1.2
-)
-
-plt.tight_layout()
-plt.show()
-
-##############################################################
-# Resolving power
-##############################################################
-
-wavelengths_nm = (
-    valid_wavelengths
-    * 1000.0
-)
-
-resolving_power = (
-    wavelengths_nm
-    / spectral_purity_nm
-)
-
-exponent = int(
-    np.floor(
-        np.log10(
-            np.max(resolving_power)
-        )
-    )
-)
-
-scale = 10**exponent
-
-print()
-
-print(
-    "Max Resolving power:"
-)
-print(
-    f"    {np.max(resolving_power):.2f}"
-)
-
-##############################################################
-# Plot resolving power
-##############################################################
-
-fig, ax = plt.subplots(
-    figsize=(8, 5)
-)
-
-ax.plot(
-    wavelengths_nm,
-    resolving_power / scale,
-    color="black",
-    linewidth=2.0
-)
-
-ax.set_xlabel(
-    r"$\mathrm{Wavelength}\;(\mathrm{nm})$",
-    fontsize=18
-)
-
-ax.set_ylabel(
-    rf"$R\;(10^{{{exponent}}})$",
-    fontsize=18
-)
-
-ax.minorticks_on()
-
-ax.tick_params(
-    which="major",
-    direction="in",
-    top=True,
-    right=True,
-    length=6,
-    width=2.2,
-    labelsize=16
-)
-
-ax.tick_params(
-    which="minor",
-    direction="in",
-    top=True,
-    right=True,
-    length=3,
-    width=1.2
-)
-
-plt.tight_layout()
-plt.show()
