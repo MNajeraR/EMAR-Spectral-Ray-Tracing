@@ -623,6 +623,59 @@ plt.tight_layout()
 plt.show()
 
 
+##############################################################
+# Plot acumulate coordinate
+##############################################################
+
+fig, ax = plt.subplots(
+    figsize=(8, 5)
+)
+
+
+ax.plot(
+    valid_wavelengths,
+    s,
+    color="black",
+    linewidth=2.0
+)
+
+
+ax.set_xlabel(
+    r"$\mathrm{Wavelength}\;(\mu\mathrm{m})$",
+    fontsize=18
+)
+
+ax.set_ylabel(
+    r"$s\;(\mathrm{mm})$",
+    fontsize=18
+)
+
+ax.minorticks_on()
+
+ax.tick_params(
+    which="major",
+    direction="in",
+    top=True,
+    right=True,
+    length=6,
+    width=2.2,
+    labelsize=16
+)
+
+ax.tick_params(
+    which="minor",
+    direction="in",
+    top=True,
+    right=True,
+    length=3,
+    width=1.2
+)
+
+
+plt.tight_layout()
+plt.show()
+
+
 
 ##############################################################
 # Plot  linear dispersion
