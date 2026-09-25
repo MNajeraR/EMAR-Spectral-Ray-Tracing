@@ -298,6 +298,55 @@ print(
 )
 
 ##############################################################
+# Plot effective spectral image width
+##############################################################
+
+fig, ax = plt.subplots(
+    figsize=(8, 5)
+)
+
+ax.plot(
+    wavelengths_nm,
+    omega_prime_dis * 1000.0, 
+    color="black",
+    linewidth=2.0
+)
+
+ax.set_xlabel(
+    r"$\mathrm{Wavelength}\;(\mathrm{nm})$",
+    fontsize=18
+)
+
+ax.set_ylabel(
+    r"$D_{\mathrm{GEO}}\;(\mu\mathrm{m})$",
+    fontsize=18
+)
+
+ax.minorticks_on()
+
+ax.tick_params(
+    which="major",
+    direction="in",
+    top=True,
+    right=True,
+    length=6,
+    width=2.2,
+    labelsize=16
+)
+
+ax.tick_params(
+    which="minor",
+    direction="in",
+    top=True,
+    right=True,
+    length=3,
+    width=1.2
+)
+
+plt.tight_layout()
+plt.show()
+
+##############################################################
 # Plot spectral purity
 ##############################################################
 
@@ -348,54 +397,7 @@ ax.tick_params(
 plt.tight_layout()
 plt.show()
 
-##############################################################
-# Plot effective spectral image width
-##############################################################
 
-fig, ax = plt.subplots(
-    figsize=(8, 5)
-)
-
-ax.plot(
-    wavelengths_nm,
-    omega_prime_dis * 1000.0, 
-    color="black",
-    linewidth=2.0
-)
-
-ax.set_xlabel(
-    r"$\mathrm{Wavelength}\;(\mathrm{nm})$",
-    fontsize=18
-)
-
-ax.set_ylabel(
-    r"$\omega'\;(\mu\mathrm{m})$",
-    fontsize=18
-)
-
-ax.minorticks_on()
-
-ax.tick_params(
-    which="major",
-    direction="in",
-    top=True,
-    right=True,
-    length=6,
-    width=2.2,
-    labelsize=16
-)
-
-ax.tick_params(
-    which="minor",
-    direction="in",
-    top=True,
-    right=True,
-    length=3,
-    width=1.2
-)
-
-plt.tight_layout()
-plt.show()
 
 ##############################################################
 # Resolving power
