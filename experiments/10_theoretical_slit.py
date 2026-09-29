@@ -677,7 +677,7 @@ np.savetxt(
 
 
 print(
-    f"Results saved to:"
+    "Results saved to:"
 )
 
 print(
@@ -711,7 +711,7 @@ ax.set_xlabel(
 
 
 ax.set_ylabel(
-    r"$R$ ($10^5$)",
+    r"$R$ ($10^4$)",
     fontsize=18
 )
 
