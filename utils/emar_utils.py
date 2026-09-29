@@ -1306,7 +1306,9 @@ def trace_all_order(
     px,
     py,
     row_order,
-    row_wave1
+    row_wave1,
+    hx=0.0,
+    hy=0.0
 ):
     """
     Trace one echelle diffraction order at an arbitrary set of
@@ -1431,8 +1433,8 @@ def trace_all_order(
                 surf=surf,
                 px=px,
                 py=py,
-                hx=0.0,
-                hy=0.0
+                hx=hx,
+                hy=hy
             )
 
 
