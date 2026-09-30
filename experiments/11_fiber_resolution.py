@@ -181,7 +181,7 @@ base_config = (
 zemax_file = (
     PROJECT_DIR
     / "Zemax"
-    / "WP - Con prismas diseñados - camara - theoretical slit.zmx"
+    / "WP - Con prismas diseñados - camara.zmx"
 )
 
 
