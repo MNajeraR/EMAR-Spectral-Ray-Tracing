@@ -1,38 +1,58 @@
 # -*- coding: utf-8 -*-
 
 """
-12_full_spectral_format.py
-==========================
+12_full_fiber_spectrum.py
+=========================
 
-Full EMAR echelle spectral analysis for orders m = 60 ... 144.
+Full EMAR echelle spectral analysis including a 100 um
+circular fiber.
+
+Orders:
+    m = 60 ... 144
 
 For every diffraction order:
 
-1. Trace the central fiber position over the wavelength range.
-2. Calculate the spectral trace and reciprocal linear dispersion.
-3. Trace the complete 100 um circular fiber ONLY at the two
-   wavelength extremes of the order.
-4. Measure:
+1. Read the wavelength limits from:
+       Results/echelle_orders_60_144.csv
 
-       omega'_blue = Delta X(lambda_min)
-       omega'_red  = Delta X(lambda_max)
+2. Generate 100 wavelengths between wave_1 and wave_11.
 
-5. Calculate resolving power only at those two extreme points:
+3. Sample the 100 um circular fiber with a deterministic
+   5-ring hexapolar distribution:
+       91 fiber points.
 
-       delta_lambda = omega' * d(lambda)/dx
-       R = lambda / delta_lambda
+4. For every fiber point, trace all 100 wavelengths using
+   a deterministic 5-ring hexapolar pupil:
+       91 pupil rays.
 
-6. Plot:
+5. For every wavelength measure:
+       Xc, Yc
+       Xmin, Xmax
+       Ymin, Ymax
+       Delta X
+       Delta Y
+
+6. Calculate the reciprocal linear dispersion along X:
+       d(lambda)/dX
+
+7. Maintain the geometrical definition:
+       omega' = Delta X
+
+8. Calculate:
+       Delta lambda = omega' * d(lambda)/dX
+       R = lambda / Delta lambda
+
+9. Save each completed order immediately.
+
+10. Produce:
        - Linear dispersion for all orders
-       - Resolving power using only the two extreme points
-       - Full echelle spectral format with fiber-image width
+       - Resolving power for all orders
+       - Echelle centroid spectral format
+       - Echelle format including the projected fiber size
 
 Color convention:
-
-       low order  -> red
-       high order -> blue
-
-This follows the physical wavelength ordering of the echelle.
+       m = 60  -> red
+       m = 144 -> blue
 
 Author
 ------
@@ -43,75 +63,35 @@ import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
+
 import numpy as np
 import pandas as pd
 import pyzdde.zdde as pyz
 
 
 ##############################################################
-# Project paths
+# Project path
 ##############################################################
 
-PROJECT_DIR = Path(__file__).resolve().parents[1]
+PROJECT_DIR = Path(
+    __file__
+).resolve().parent.parent
+
 
 if str(PROJECT_DIR) not in sys.path:
+
     sys.path.insert(
         0,
         str(PROJECT_DIR)
     )
 
+
+##############################################################
+# EMAR utilities
+##############################################################
+
 from utils import emar_utils
-
-
-##############################################################
-# Progress bar
-##############################################################
-
-def print_progress(
-    current,
-    total,
-    prefix="",
-    bar_length=40
-):
-
-    fraction = current / total
-
-    filled = int(
-        bar_length * fraction
-    )
-
-    bar = (
-        "=" * filled
-        + "-" * (bar_length - filled)
-    )
-
-    print(
-        f"\r{prefix}"
-        f"[{bar}] "
-        f"{100.0*fraction:6.2f}% "
-        f"({current}/{total})",
-        end="",
-        flush=True
-    )
-
-    if current == total:
-        print()
-
-
-##############################################################
-# Orders
-##############################################################
-
-orders = np.arange(
-    60,
-    145
-)
-
-n_orders = len(
-    orders
-)
 
 
 ##############################################################
@@ -122,20 +102,34 @@ surf_detector = 54
 
 
 ##############################################################
-# Fiber
+# Spectral sampling
+##############################################################
+
+n_wavelengths = 100
+
+
+##############################################################
+# Fiber geometry
 ##############################################################
 
 fiber_diameter_um = 100.0
 
+
+##############################################################
+# Hexapolar sampling
+##############################################################
+
 n_fiber_rings = 5
+
 n_pupil_rings = 5
 
 
 ##############################################################
-# Calibrated fiber field coordinates
+# Calibrated field coordinates for the 100 um fiber
 ##############################################################
 
 hx_max = 0.286480
+
 hy_max = 0.285400
 
 
@@ -144,51 +138,57 @@ hy_max = 0.285400
 ##############################################################
 
 row_order = 1
+
 row_wave1 = 2
 
 
 ##############################################################
-# Number of wavelengths used to describe each spectral order
+# Files
 ##############################################################
 
-n_wavelengths = 100
+orders_file = (
+    emar_utils.RESULTS_DIR
+    / "echelle_orders_60_144.csv"
+)
 
-
-##############################################################
-# Zemax model
-##############################################################
 
 zemax_file = (
-    PROJECT_DIR
-    / "Zemax"
+    emar_utils.ZEMAX_DIR
     / "WP - Con prismas diseñados - camara - theoretical slit.zmx"
 )
 
 
+output_file = (
+    emar_utils.RESULTS_DIR
+    / "full_orders_fiber_resolution.csv"
+)
+
+
 ##############################################################
-# Output files
+# Load complete echelle-order table
 ##############################################################
 
-results_dir = (
-    PROJECT_DIR
-    / "Results"
-)
-
-results_dir.mkdir(
-    parents=True,
-    exist_ok=True
-)
-
-
-spectral_file = (
-    results_dir
-    / "full_spectral_format.csv"
+order_table = np.genfromtxt(
+    orders_file,
+    delimiter=",",
+    names=True,
+    dtype=None,
+    encoding="utf-8"
 )
 
 
-resolution_file = (
-    results_dir
-    / "full_fiber_resolution_extremes.csv"
+##############################################################
+# Orders
+##############################################################
+
+orders = np.asarray(
+    order_table["order"],
+    dtype=int
+)
+
+
+n_orders = len(
+    orders
 )
 
 
@@ -209,6 +209,7 @@ hx_fiber = (
     * fiber_x_norm
 )
 
+
 hy_fiber = (
     hy_max
     * fiber_y_norm
@@ -228,166 +229,234 @@ px, py = (
 
 
 ##############################################################
-# Central ray for spectral trace
+# Sampling information
 ##############################################################
 
-px_center = np.array([
-    0.0
-])
+n_fiber_points = len(
+    hx_fiber
+)
 
-py_center = np.array([
-    0.0
-])
+
+n_pupil_rays = len(
+    px
+)
+
+
+n_rays_per_wavelength = (
+    n_fiber_points
+    * n_pupil_rays
+)
+
+
+n_rays_per_order = (
+    n_rays_per_wavelength
+    * n_wavelengths
+)
+
+
+n_total_rays = (
+    n_rays_per_order
+    * n_orders
+)
+
+
+##############################################################
+# Progress bar
+##############################################################
+
+def print_progress(
+    current,
+    total,
+    order,
+    fiber_point,
+    fiber_total,
+    bar_length=40
+):
+
+    """
+    Global progress bar over the complete 85-order calculation.
+    """
+
+    fraction = (
+        current
+        / total
+    )
+
+
+    filled_length = int(
+        bar_length
+        * fraction
+    )
+
+
+    bar = (
+        "="
+        * filled_length
+        + "-"
+        * (
+            bar_length
+            - filled_length
+        )
+    )
+
+
+    percentage = (
+        100.0
+        * fraction
+    )
+
+
+    print(
+        f"\r[{bar}] "
+        f"{percentage:6.2f}% | "
+        f"m={order:3d} | "
+        f"fiber {fiber_point:2d}/{fiber_total}",
+        end="",
+        flush=True
+    )
+
+
+    if current == total:
+
+        print()
 
 
 ##############################################################
 # Storage
 ##############################################################
 
-spectral_rows = []
-
-resolution_rows = []
+all_order_results = []
 
 
 ##############################################################
-# Helper: trace complete fiber image
+# Print experiment information
 ##############################################################
 
-def trace_fiber_image(
-    ln,
-    wavelength_um,
-    order,
-    base_config
-):
+print()
 
-    all_x = []
-    all_y = []
+print(
+    "EMAR full 100 um fiber spectral analysis"
+)
 
-
-    for hx, hy in zip(
-        hx_fiber,
-        hy_fiber
-    ):
-
-        result = emar_utils.trace_all_order(
-            ln=ln,
-            wavelengths=np.array([
-                wavelength_um
-            ]),
-            px=px,
-            py=py,
-            surf=surf_detector,
-            target_order=int(order),
-            base_config=int(base_config),
-            row_order=row_order,
-            row_wave1=row_wave1,
-            hx=float(hx),
-            hy=float(hy)
-        )
+print(
+    "----------------------------------------"
+)
 
 
-        spot = next(
-            iter(
-                result["spots"].values()
-            )
-        )
+print(
+    f"Orders:                    "
+    f"{orders.min()} - {orders.max()}"
+)
 
 
-        x = np.asarray(
-            spot["x"],
-            dtype=float
-        )
-
-        y = np.asarray(
-            spot["y"],
-            dtype=float
-        )
+print(
+    f"Number of orders:          "
+    f"{n_orders}"
+)
 
 
-        if len(x) > 0:
-
-            all_x.extend(
-                x
-            )
-
-            all_y.extend(
-                y
-            )
+print(
+    f"Wavelengths/order:         "
+    f"{n_wavelengths}"
+)
 
 
-    all_x = np.asarray(
-        all_x,
-        dtype=float
-    )
+print()
 
-    all_y = np.asarray(
-        all_y,
-        dtype=float
-    )
+print(
+    f"Fiber diameter:            "
+    f"{fiber_diameter_um:.1f} um"
+)
 
 
-    if len(all_x) == 0:
-
-        return {
-            "xc": np.nan,
-            "yc": np.nan,
-            "xmin": np.nan,
-            "xmax": np.nan,
-            "ymin": np.nan,
-            "ymax": np.nan,
-            "dx_um": np.nan,
-            "dy_um": np.nan,
-            "n_rays": 0
-        }
+print(
+    f"Fiber rings:               "
+    f"{n_fiber_rings}"
+)
 
 
-    xmin = np.min(all_x)
-    xmax = np.max(all_x)
+print(
+    f"Fiber points:              "
+    f"{n_fiber_points}"
+)
 
-    ymin = np.min(all_y)
-    ymax = np.max(all_y)
+
+print(
+    f"Pupil rings:               "
+    f"{n_pupil_rings}"
+)
 
 
-    return {
+print(
+    f"Pupil rays:                "
+    f"{n_pupil_rays}"
+)
 
-        "xc":
-            np.mean(all_x),
 
-        "yc":
-            np.mean(all_y),
+print()
 
-        "xmin":
-            xmin,
+print(
+    f"Rays/wavelength:           "
+    f"{n_rays_per_wavelength:,}"
+)
 
-        "xmax":
-            xmax,
 
-        "ymin":
-            ymin,
+print(
+    f"Rays/order:                "
+    f"{n_rays_per_order:,}"
+)
 
-        "ymax":
-            ymax,
 
-        "dx_um":
-            (xmax - xmin) * 1000.0,
+print(
+    f"Maximum total rays:        "
+    f"{n_total_rays:,}"
+)
 
-        "dy_um":
-            (ymax - ymin) * 1000.0,
 
-        "n_rays":
-            len(all_x)
-    }
+print()
+
+print(
+    "Tracing..."
+)
+
+print()
 
 
 ##############################################################
-# Open Zemax
+# Open PyZDDE connection
 ##############################################################
 
 ln = pyz.createLink()
 
+
+if ln is None:
+
+    raise RuntimeError(
+        "Could not establish a PyZDDE connection "
+        "to Zemax OpticStudio."
+    )
+
+
+##############################################################
+# Load Zemax model
+##############################################################
+
 ln.zLoadFile(
     str(zemax_file)
 )
+
+
+##############################################################
+# Global progress counter
+##############################################################
+
+total_calls = (
+    n_orders
+    * n_fiber_points
+)
+
+
+completed_calls = 0
 
 
 ##############################################################
@@ -396,78 +465,55 @@ ln.zLoadFile(
 
 try:
 
-    print()
-
-    print(
-        "EMAR full spectral-format analysis"
-    )
-
-    print(
-        "----------------------------------"
-    )
-
-    print(
-        f"Orders:            "
-        f"{orders.min()} - {orders.max()}"
-    )
-
-    print(
-        f"Number of orders:  {n_orders}"
-    )
-
-    print(
-        f"Fiber points:      {len(hx_fiber)}"
-    )
-
-    print(
-        f"Pupil rays:        {len(px)}"
-    )
-
-    print()
-
-
     ##########################################################
     # Loop over diffraction orders
     ##########################################################
 
-    for order_index, order in enumerate(
-        orders
+    for order_index, row in enumerate(
+        order_table,
+        start=1
     ):
 
         ######################################################
-        # Configuration
+        # Order information
         ######################################################
 
-        base_config = (
-            (int(order) - 60) // 7 + 1
+        order = int(
+            row["order"]
         )
 
 
+        status = row[
+            "status"
+        ]
+
+
         ######################################################
-        # IMPORTANT
-        #
-        # Obtain wavelength range for this order.
-        #
-        # The existing EMAR utilities should provide the
-        # wavelength range associated with each diffraction
-        # order/configuration.
+        # Reference wavelengths
         ######################################################
 
-        wavelengths_um = (
-            emar_utils.get_order_wavelengths(
-                ln=ln,
-                target_order=int(order),
-                base_config=int(base_config),
-                n_wavelengths=n_wavelengths,
-                row_order=row_order,
-                row_wave1=row_wave1
-            )
-        )
-
-
-        wavelengths_um = np.asarray(
-            wavelengths_um,
+        reference_wavelengths = np.asarray(
+            [
+                row[
+                    f"wave_{j}"
+                ]
+                for j in range(
+                    1,
+                    12
+                )
+            ],
             dtype=float
+        )
+
+
+        ######################################################
+        # Dense wavelength sampling
+        ######################################################
+
+        wavelengths_um = np.linspace(
+            reference_wavelengths[0],
+            reference_wavelengths[-1],
+            n_wavelengths
         )
 
 
@@ -477,118 +523,398 @@ try:
         )
 
 
-        ######################################################
-        # Trace spectral centerline
-        ######################################################
-
-        trace = emar_utils.trace_all_order(
-            ln=ln,
-            wavelengths=wavelengths_um,
-            px=px_center,
-            py=py_center,
-            surf=surf_detector,
-            target_order=int(order),
-            base_config=int(base_config),
-            row_order=row_order,
-            row_wave1=row_wave1,
-            hx=0.0,
-            hy=0.0
+        wavelengths_A = (
+            wavelengths_nm
+            * 10.0
         )
 
 
         ######################################################
-        # Extract centroid coordinates
+        # Select nearest lower original Zemax configuration
         ######################################################
 
-        x_centroid = []
-        y_centroid = []
-
-
-        spots = list(
-            trace["spots"].values()
+        base_config = (
+            (order - 60) // 7
+            + 1
         )
 
 
-        if len(spots) != len(wavelengths_um):
+        ######################################################
+        # Storage for complete fiber image at each wavelength
+        ######################################################
 
-            raise RuntimeError(
-                f"Order {order}: "
-                f"{len(spots)} spectral points returned "
-                f"for {len(wavelengths_um)} wavelengths."
+        fiber_x_by_wave = [
+            []
+            for _ in range(
+                n_wavelengths
+            )
+        ]
+
+
+        fiber_y_by_wave = [
+            []
+            for _ in range(
+                n_wavelengths
+            )
+        ]
+
+
+        ######################################################
+        # Loop over fiber points
+        #
+        # One trace_all_order call traces ALL wavelengths
+        # for one fiber position.
+        ######################################################
+
+        for fiber_index, (hx, hy) in enumerate(
+            zip(
+                hx_fiber,
+                hy_fiber
+            ),
+            start=1
+        ):
+
+            result = emar_utils.trace_all_order(
+                ln=ln,
+                base_config=base_config,
+                target_order=order,
+                wavelengths=wavelengths_um,
+                surf=surf_detector,
+                px=px,
+                py=py,
+                row_order=row_order,
+                row_wave1=row_wave1,
+                hx=float(hx),
+                hy=float(hy)
             )
 
 
-        for spot in spots:
+            ##################################################
+            # Retrieve the 100 wavelength footprints
+            ##################################################
+
+            spots = list(
+                result[
+                    "spots"
+                ].values()
+            )
+
+
+            if len(spots) != n_wavelengths:
+
+                raise RuntimeError(
+                    f"Order m={order}, "
+                    f"fiber point {fiber_index}: "
+                    f"{len(spots)} spots returned for "
+                    f"{n_wavelengths} wavelengths."
+                )
+
+
+            ##################################################
+            # Accumulate rays wavelength by wavelength
+            ##################################################
+
+            for wave_index, spot in enumerate(
+                spots
+            ):
+
+                x = np.asarray(
+                    spot["x"],
+                    dtype=float
+                )
+
+
+                y = np.asarray(
+                    spot["y"],
+                    dtype=float
+                )
+
+
+                if len(x) > 0:
+
+                    fiber_x_by_wave[
+                        wave_index
+                    ].extend(
+                        x
+                    )
+
+
+                    fiber_y_by_wave[
+                        wave_index
+                    ].extend(
+                        y
+                    )
+
+
+            ##################################################
+            # Global progress
+            ##################################################
+
+            completed_calls += 1
+
+
+            print_progress(
+                current=completed_calls,
+                total=total_calls,
+                order=order,
+                fiber_point=fiber_index,
+                fiber_total=n_fiber_points
+            )
+
+
+        ######################################################
+        # Measure fiber image at every wavelength
+        ######################################################
+
+        x_centroid = np.full(
+            n_wavelengths,
+            np.nan
+        )
+
+
+        y_centroid = np.full(
+            n_wavelengths,
+            np.nan
+        )
+
+
+        x_minimum = np.full(
+            n_wavelengths,
+            np.nan
+        )
+
+
+        x_maximum = np.full(
+            n_wavelengths,
+            np.nan
+        )
+
+
+        y_minimum = np.full(
+            n_wavelengths,
+            np.nan
+        )
+
+
+        y_maximum = np.full(
+            n_wavelengths,
+            np.nan
+        )
+
+
+        delta_x_um = np.full(
+            n_wavelengths,
+            np.nan
+        )
+
+
+        delta_y_um = np.full(
+            n_wavelengths,
+            np.nan
+        )
+
+
+        valid_ray_count = np.zeros(
+            n_wavelengths,
+            dtype=int
+        )
+
+
+        ######################################################
+        # Wavelength loop
+        ######################################################
+
+        for wave_index in range(
+            n_wavelengths
+        ):
 
             x = np.asarray(
-                spot["x"],
+                fiber_x_by_wave[
+                    wave_index
+                ],
                 dtype=float
             )
 
+
             y = np.asarray(
-                spot["y"],
+                fiber_y_by_wave[
+                    wave_index
+                ],
                 dtype=float
+            )
+
+
+            valid_ray_count[
+                wave_index
+            ] = len(
+                x
             )
 
 
             if len(x) == 0:
 
-                x_centroid.append(
-                    np.nan
-                )
-
-                y_centroid.append(
-                    np.nan
-                )
-
-            else:
-
-                x_centroid.append(
-                    np.mean(x)
-                )
-
-                y_centroid.append(
-                    np.mean(y)
-                )
+                continue
 
 
-        x_centroid = np.asarray(
-            x_centroid,
-            dtype=float
-        )
+            ##################################################
+            # Fiber centroid
+            ##################################################
 
-        y_centroid = np.asarray(
-            y_centroid,
-            dtype=float
-        )
+            x_centroid[
+                wave_index
+            ] = np.mean(
+                x
+            )
+
+
+            y_centroid[
+                wave_index
+            ] = np.mean(
+                y
+            )
+
+
+            ##################################################
+            # Fiber image envelope
+            ##################################################
+
+            x_minimum[
+                wave_index
+            ] = np.min(
+                x
+            )
+
+
+            x_maximum[
+                wave_index
+            ] = np.max(
+                x
+            )
+
+
+            y_minimum[
+                wave_index
+            ] = np.min(
+                y
+            )
+
+
+            y_maximum[
+                wave_index
+            ] = np.max(
+                y
+            )
+
+
+            ##################################################
+            # Fiber image size
+            ##################################################
+
+            delta_x_um[
+                wave_index
+            ] = (
+                x_maximum[
+                    wave_index
+                ]
+                -
+                x_minimum[
+                    wave_index
+                ]
+            ) * 1000.0
+
+
+            delta_y_um[
+                wave_index
+            ] = (
+                y_maximum[
+                    wave_index
+                ]
+                -
+                y_minimum[
+                    wave_index
+                ]
+            ) * 1000.0
 
 
         ######################################################
-        # Reciprocal dispersion along X
+        # Check valid spectral points
         ######################################################
 
+        valid = (
+            np.isfinite(
+                x_centroid
+            )
+            &
+            np.isfinite(
+                wavelengths_nm
+            )
+        )
+
+
+        if np.count_nonzero(
+            valid
+        ) < 3:
+
+            raise RuntimeError(
+                f"Order m={order}: insufficient valid "
+                f"spectral points."
+            )
+
+
+        ######################################################
+        # Reciprocal dispersion along detector X
+        #
         # dx/dlambda:
         #
         #       mm / nm
+        ######################################################
 
-        dx_dlambda = np.gradient(
-            x_centroid,
-            wavelengths_nm
+        dx_dlambda = np.full(
+            n_wavelengths,
+            np.nan
         )
 
 
-        # d(lambda)/dx:
-        #
-        #       nm / mm
-
-        reciprocal_dispersion = (
-            1.0
-            / np.abs(dx_dlambda)
+        dx_dlambda[
+            valid
+        ] = np.gradient(
+            x_centroid[
+                valid
+            ],
+            wavelengths_nm[
+                valid
+            ]
         )
 
 
         ######################################################
-        # Convert to Angstrom/mm
+        # d(lambda)/dX
+        #
+        #       nm / mm
+        ######################################################
+
+        reciprocal_dispersion = np.full(
+            n_wavelengths,
+            np.nan
+        )
+
+
+        reciprocal_dispersion[
+            valid
+        ] = (
+            1.0
+            / np.abs(
+                dx_dlambda[
+                    valid
+                ]
+            )
+        )
+
+
+        ######################################################
+        # Linear dispersion
+        #
+        #       Angstrom / mm
         ######################################################
 
         linear_dispersion_A_per_mm = (
@@ -598,223 +924,192 @@ try:
 
 
         ######################################################
-        # Save spectral trace
+        # Our definition:
+        #
+        #       omega' = Delta X
         ######################################################
 
-        for i in range(
-            len(wavelengths_nm)
-        ):
-
-            spectral_rows.append(
-                {
-                    "order":
-                        int(order),
-
-                    "wavelength_nm":
-                        wavelengths_nm[i],
-
-                    "wavelength_A":
-                        wavelengths_nm[i] * 10.0,
-
-                    "x_centroid_mm":
-                        x_centroid[i],
-
-                    "y_centroid_mm":
-                        y_centroid[i],
-
-                    "reciprocal_dispersion_nm_per_mm":
-                        reciprocal_dispersion[i],
-
-                    "linear_dispersion_A_per_mm":
-                        linear_dispersion_A_per_mm[i]
-                }
-            )
+        omega_prime_um = (
+            delta_x_um.copy()
+        )
 
 
-        ######################################################
-        # Fiber image at BLUE edge
-        ######################################################
-
-        blue_index = 0
-
-        blue_fiber = trace_fiber_image(
-            ln=ln,
-            wavelength_um=wavelengths_um[
-                blue_index
-            ],
-            order=order,
-            base_config=base_config
+        omega_prime_mm = (
+            omega_prime_um
+            / 1000.0
         )
 
 
         ######################################################
-        # Fiber image at RED edge
+        # Spectral purity
+        #
+        #       nm
         ######################################################
 
-        red_index = (
-            len(wavelengths_um)
-            - 1
-        )
-
-        red_fiber = trace_fiber_image(
-            ln=ln,
-            wavelength_um=wavelengths_um[
-                red_index
-            ],
-            order=order,
-            base_config=base_config
+        delta_lambda_nm = (
+            omega_prime_mm
+            * reciprocal_dispersion
         )
 
 
         ######################################################
-        # Calculate R at the two extremes
+        # Spectral purity
+        #
+        #       pm
         ######################################################
 
-        for label, index, fiber in [
-
-            (
-                "blue",
-                blue_index,
-                blue_fiber
-            ),
-
-            (
-                "red",
-                red_index,
-                red_fiber
-            )
-        ]:
-
-            omega_prime_um = (
-                fiber["dx_um"]
-            )
-
-
-            omega_prime_mm = (
-                omega_prime_um
-                / 1000.0
-            )
-
-
-            delta_lambda_nm = (
-                omega_prime_mm
-                * reciprocal_dispersion[
-                    index
-                ]
-            )
-
-
-            resolving_power = (
-                wavelengths_nm[
-                    index
-                ]
-                / delta_lambda_nm
-            )
-
-
-            resolution_rows.append(
-                {
-                    "order":
-                        int(order),
-
-                    "edge":
-                        label,
-
-                    "wavelength_nm":
-                        wavelengths_nm[index],
-
-                    "wavelength_A":
-                        wavelengths_nm[index] * 10.0,
-
-                    "x_centroid_mm":
-                        fiber["xc"],
-
-                    "y_centroid_mm":
-                        fiber["yc"],
-
-                    "x_min_mm":
-                        fiber["xmin"],
-
-                    "x_max_mm":
-                        fiber["xmax"],
-
-                    "y_min_mm":
-                        fiber["ymin"],
-
-                    "y_max_mm":
-                        fiber["ymax"],
-
-                    "delta_x_um":
-                        fiber["dx_um"],
-
-                    "delta_y_um":
-                        fiber["dy_um"],
-
-                    "omega_prime_um":
-                        omega_prime_um,
-
-                    "reciprocal_dispersion_nm_per_mm":
-                        reciprocal_dispersion[index],
-
-                    "delta_lambda_nm":
-                        delta_lambda_nm,
-
-                    "resolving_power":
-                        resolving_power,
-
-                    "valid_ray_count":
-                        fiber["n_rays"]
-                }
-            )
+        delta_lambda_pm = (
+            delta_lambda_nm
+            * 1000.0
+        )
 
 
         ######################################################
-        # Progress
+        # Resolving power
         ######################################################
 
-        print_progress(
-            current=order_index + 1,
-            total=n_orders,
-            prefix=f"m={order:3d}  "
+        resolving_power = (
+            wavelengths_nm
+            / delta_lambda_nm
+        )
+
+
+        ######################################################
+        # Build DataFrame for this order
+        ######################################################
+
+        order_df = pd.DataFrame(
+            {
+                "order":
+                    np.full(
+                        n_wavelengths,
+                        order,
+                        dtype=int
+                    ),
+
+                "status":
+                    np.full(
+                        n_wavelengths,
+                        status,
+                        dtype=object
+                    ),
+
+                "wavelength_um":
+                    wavelengths_um,
+
+                "wavelength_nm":
+                    wavelengths_nm,
+
+                "wavelength_A":
+                    wavelengths_A,
+
+                "x_centroid_mm":
+                    x_centroid,
+
+                "y_centroid_mm":
+                    y_centroid,
+
+                "x_min_mm":
+                    x_minimum,
+
+                "x_max_mm":
+                    x_maximum,
+
+                "y_min_mm":
+                    y_minimum,
+
+                "y_max_mm":
+                    y_maximum,
+
+                "delta_x_um":
+                    delta_x_um,
+
+                "delta_y_um":
+                    delta_y_um,
+
+                "omega_prime_um":
+                    omega_prime_um,
+
+                "reciprocal_dispersion_nm_per_mm":
+                    reciprocal_dispersion,
+
+                "linear_dispersion_A_per_mm":
+                    linear_dispersion_A_per_mm,
+
+                "delta_lambda_nm":
+                    delta_lambda_nm,
+
+                "delta_lambda_pm":
+                    delta_lambda_pm,
+
+                "resolving_power":
+                    resolving_power,
+
+                "valid_ray_count":
+                    valid_ray_count
+            }
+        )
+
+
+        ######################################################
+        # Store in memory
+        ######################################################
+
+        all_order_results.append(
+            order_df
+        )
+
+
+        ######################################################
+        # Save immediately after each completed order
+        #
+        # This protects the long calculation if Zemax/PyZDDE
+        # stops before all 85 orders are finished.
+        ######################################################
+
+        current_results = pd.concat(
+            all_order_results,
+            ignore_index=True
+        )
+
+
+        current_results.to_csv(
+            output_file,
+            index=False
         )
 
 
 finally:
 
-    pyz.closeLink()
+    ##########################################################
+    # Close Zemax
+    ##########################################################
+
+    ln.close()
 
 
 ##############################################################
-# Convert results to DataFrames
+# Combine complete results
 ##############################################################
 
-spectral_df = pd.DataFrame(
-    spectral_rows
-)
-
-resolution_df = pd.DataFrame(
-    resolution_rows
-)
-
-
-##############################################################
-# Save CSV files
-##############################################################
-
-spectral_df.to_csv(
-    spectral_file,
-    index=False
+results_df = pd.concat(
+    all_order_results,
+    ignore_index=True
 )
 
 
-resolution_df.to_csv(
-    resolution_file,
+##############################################################
+# Final save
+##############################################################
+
+results_df.to_csv(
+    output_file,
     index=False
 )
 
 
 ##############################################################
-# Color map
+# Color convention
 #
 # Low order  -> red
 # High order -> blue
@@ -822,10 +1117,79 @@ resolution_df.to_csv(
 
 cmap = plt.cm.turbo_r
 
+
 norm = Normalize(
     vmin=orders.min(),
     vmax=orders.max()
 )
+
+
+##############################################################
+# Colorbar helper
+##############################################################
+
+def add_order_colorbar(
+    fig,
+    ax
+):
+
+    sm = plt.cm.ScalarMappable(
+        norm=norm,
+        cmap=cmap
+    )
+
+
+    sm.set_array([])
+
+
+    cbar = fig.colorbar(
+        sm,
+        ax=ax,
+        pad=0.02
+    )
+
+
+    cbar.set_label(
+        r"Diffraction order, $m$",
+        fontsize=18
+    )
+
+
+    cbar.ax.tick_params(
+        labelsize=14
+    )
+
+
+##############################################################
+# Common axis style
+##############################################################
+
+def style_axis(
+    ax
+):
+
+    ax.minorticks_on()
+
+
+    ax.tick_params(
+        which="major",
+        direction="in",
+        top=True,
+        right=True,
+        length=6,
+        width=2.2,
+        labelsize=16
+    )
+
+
+    ax.tick_params(
+        which="minor",
+        direction="in",
+        top=True,
+        right=True,
+        length=3,
+        width=1.2
+    )
 
 
 ##############################################################
@@ -841,19 +1205,27 @@ fig, ax = plt.subplots(
 
 for order in orders:
 
-    data = spectral_df[
-        spectral_df["order"] == order
-    ]
-
-    color = cmap(
-        norm(order)
+    data = results_df[
+        results_df[
+            "order"
+        ] == order
+    ].sort_values(
+        "wavelength_A"
     )
 
 
     ax.plot(
-        data["wavelength_A"],
-        data["linear_dispersion_A_per_mm"],
-        color=color,
+        data[
+            "wavelength_A"
+        ],
+        data[
+            "linear_dispersion_A_per_mm"
+        ],
+        color=cmap(
+            norm(
+                order
+            )
+        ),
         linewidth=1.4
     )
 
@@ -863,57 +1235,21 @@ ax.set_xlabel(
     fontsize=18
 )
 
+
 ax.set_ylabel(
     r"$\mathrm{Linear\ dispersion}\;(\AA/\mathrm{mm})$",
     fontsize=18
 )
 
 
-ax.minorticks_on()
-
-
-ax.tick_params(
-    which="major",
-    direction="in",
-    top=True,
-    right=True,
-    length=6,
-    width=2.2,
-    labelsize=16
+style_axis(
+    ax
 )
 
 
-ax.tick_params(
-    which="minor",
-    direction="in",
-    top=True,
-    right=True,
-    length=3,
-    width=1.2
-)
-
-
-sm = plt.cm.ScalarMappable(
-    norm=norm,
-    cmap=cmap
-)
-
-sm.set_array([])
-
-
-cbar = fig.colorbar(
-    sm,
-    ax=ax,
-    pad=0.02
-)
-
-cbar.set_label(
-    r"Diffraction order, $m$",
-    fontsize=18
-)
-
-cbar.ax.tick_params(
-    labelsize=14
+add_order_colorbar(
+    fig,
+    ax
 )
 
 
@@ -925,10 +1261,10 @@ plt.show()
 ##############################################################
 # Plot 2
 #
-# Resolving power
+# Complete resolving power
 #
-# ONLY the two extreme fiber measurements of each order
-# are used.
+# omega'(lambda) is independently measured at all
+# 100 wavelengths of every order.
 ##############################################################
 
 fig, ax = plt.subplots(
@@ -938,23 +1274,28 @@ fig, ax = plt.subplots(
 
 for order in orders:
 
-    data = resolution_df[
-        resolution_df["order"] == order
+    data = results_df[
+        results_df[
+            "order"
+        ] == order
     ].sort_values(
         "wavelength_A"
     )
 
 
-    color = cmap(
-        norm(order)
-    )
-
-
     ax.plot(
-        data["wavelength_A"],
-        data["resolving_power"],
-        color=color,
-        linewidth=1.5
+        data[
+            "wavelength_A"
+        ],
+        data[
+            "resolving_power"
+        ],
+        color=cmap(
+            norm(
+                order
+            )
+        ),
+        linewidth=1.3
     )
 
 
@@ -963,57 +1304,21 @@ ax.set_xlabel(
     fontsize=18
 )
 
+
 ax.set_ylabel(
     r"$\mathrm{Resolving\ power},\ R=\lambda/\Delta\lambda$",
     fontsize=18
 )
 
 
-ax.minorticks_on()
-
-
-ax.tick_params(
-    which="major",
-    direction="in",
-    top=True,
-    right=True,
-    length=6,
-    width=2.2,
-    labelsize=16
+style_axis(
+    ax
 )
 
 
-ax.tick_params(
-    which="minor",
-    direction="in",
-    top=True,
-    right=True,
-    length=3,
-    width=1.2
-)
-
-
-sm = plt.cm.ScalarMappable(
-    norm=norm,
-    cmap=cmap
-)
-
-sm.set_array([])
-
-
-cbar = fig.colorbar(
-    sm,
-    ax=ax,
-    pad=0.02
-)
-
-cbar.set_label(
-    r"Diffraction order, $m$",
-    fontsize=18
-)
-
-cbar.ax.tick_params(
-    labelsize=14
+add_order_colorbar(
+    fig,
+    ax
 )
 
 
@@ -1025,8 +1330,8 @@ plt.show()
 ##############################################################
 # Plot 3
 #
-# Echelle spectral format
-# including projected fiber-image size
+# Echelle spectral format:
+# fiber-image centroids
 ##############################################################
 
 fig, ax = plt.subplots(
@@ -1036,115 +1341,36 @@ fig, ax = plt.subplots(
 
 for order in orders:
 
-    spectral_order = spectral_df[
-        spectral_df["order"] == order
+    data = results_df[
+        results_df[
+            "order"
+        ] == order
     ].sort_values(
         "wavelength_nm"
     )
-
-
-    fiber_order = resolution_df[
-        resolution_df["order"] == order
-    ].sort_values(
-        "wavelength_nm"
-    )
-
-
-    color = cmap(
-        norm(order)
-    )
-
-
-    ##########################################################
-    # Spectral centerline
-    ##########################################################
-
-    x = spectral_order[
-        "x_centroid_mm"
-    ].to_numpy()
-
-    y = spectral_order[
-        "y_centroid_mm"
-    ].to_numpy()
 
 
     ax.plot(
-        x,
-        y,
-        color=color,
-        linewidth=1.3
+        data[
+            "x_centroid_mm"
+        ],
+        data[
+            "y_centroid_mm"
+        ],
+        color=cmap(
+            norm(
+                order
+            )
+        ),
+        linewidth=1.2
     )
-
-
-    ##########################################################
-    # Fiber width at both order extremes
-    #
-    # Draw the actual measured rectangular envelope:
-    #
-    #       Delta X x Delta Y
-    #
-    # around each extreme.
-    ##########################################################
-
-    for _, row in fiber_order.iterrows():
-
-        xmin = row[
-            "x_min_mm"
-        ]
-
-        xmax = row[
-            "x_max_mm"
-        ]
-
-        ymin = row[
-            "y_min_mm"
-        ]
-
-        ymax = row[
-            "y_max_mm"
-        ]
-
-
-        ######################################################
-        # Horizontal extent
-        ######################################################
-
-        ax.plot(
-            [
-                xmin,
-                xmax
-            ],
-            [
-                row["y_centroid_mm"],
-                row["y_centroid_mm"]
-            ],
-            color=color,
-            linewidth=2.0
-        )
-
-
-        ######################################################
-        # Vertical extent
-        ######################################################
-
-        ax.plot(
-            [
-                row["x_centroid_mm"],
-                row["x_centroid_mm"]
-            ],
-            [
-                ymin,
-                ymax
-            ],
-            color=color,
-            linewidth=2.0
-        )
 
 
 ax.set_xlabel(
     r"$X\;(\mathrm{mm})$",
     fontsize=18
 )
+
 
 ax.set_ylabel(
     r"$Y\;(\mathrm{mm})$",
@@ -1158,51 +1384,132 @@ ax.set_aspect(
 )
 
 
-ax.minorticks_on()
-
-
-ax.tick_params(
-    which="major",
-    direction="in",
-    top=True,
-    right=True,
-    length=6,
-    width=2.2,
-    labelsize=16
+style_axis(
+    ax
 )
 
 
-ax.tick_params(
-    which="minor",
-    direction="in",
-    top=True,
-    right=True,
-    length=3,
-    width=1.2
+add_order_colorbar(
+    fig,
+    ax
 )
 
 
-sm = plt.cm.ScalarMappable(
-    norm=norm,
-    cmap=cmap
+fig.tight_layout()
+
+plt.show()
+
+
+##############################################################
+# Plot 4
+#
+# Echelle spectral format including projected fiber size
+#
+# The envelope is NOT interpolated.
+#
+# ymin(lambda) and ymax(lambda) come directly from the
+# complete fiber ray tracing at every wavelength.
+##############################################################
+
+fig, ax = plt.subplots(
+    figsize=(10, 7)
 )
 
-sm.set_array([])
+
+for order in orders:
+
+    data = results_df[
+        results_df[
+            "order"
+        ] == order
+    ].sort_values(
+        "wavelength_nm"
+    )
 
 
-cbar = fig.colorbar(
-    sm,
-    ax=ax,
-    pad=0.02
-)
+    color = cmap(
+        norm(
+            order
+        )
+    )
 
-cbar.set_label(
-    r"Diffraction order, $m$",
+
+    ##########################################################
+    # Coordinates
+    ##########################################################
+
+    xc = data[
+        "x_centroid_mm"
+    ].to_numpy()
+
+
+    yc = data[
+        "y_centroid_mm"
+    ].to_numpy()
+
+
+    ymin = data[
+        "y_min_mm"
+    ].to_numpy()
+
+
+    ymax = data[
+        "y_max_mm"
+    ].to_numpy()
+
+
+    ##########################################################
+    # Fiber envelope
+    ##########################################################
+
+    ax.fill_between(
+        xc,
+        ymin,
+        ymax,
+        color=color,
+        alpha=0.55,
+        linewidth=0.0
+    )
+
+
+    ##########################################################
+    # Spectral centroid
+    ##########################################################
+
+    ax.plot(
+        xc,
+        yc,
+        color=color,
+        linewidth=0.8
+    )
+
+
+ax.set_xlabel(
+    r"$X\;(\mathrm{mm})$",
     fontsize=18
 )
 
-cbar.ax.tick_params(
-    labelsize=14
+
+ax.set_ylabel(
+    r"$Y\;(\mathrm{mm})$",
+    fontsize=18
+)
+
+
+ax.set_aspect(
+    "equal",
+    adjustable="box"
+)
+
+
+style_axis(
+    ax
+)
+
+
+add_order_colorbar(
+    fig,
+    ax
 )
 
 
@@ -1218,60 +1525,129 @@ plt.show()
 print()
 
 print(
-    "Full EMAR analysis completed"
+    "Full EMAR fiber analysis completed"
 )
 
 print(
-    "----------------------------"
+    "----------------------------------"
 )
 
 
 print(
-    f"Orders:              "
+    f"Orders:                    "
     f"{orders.min()} - {orders.max()}"
 )
 
-print(
-    f"Spectral points:     "
-    f"{len(spectral_df)}"
-)
 
 print(
-    f"Resolution points:   "
-    f"{len(resolution_df)}"
+    f"Total spectral points:     "
+    f"{len(results_df):,}"
 )
 
 
 print()
 
-
 print(
-    f"R minimum:           "
-    f"{resolution_df['resolving_power'].min():.0f}"
+    "Fiber image"
 )
 
 print(
-    f"R maximum:           "
-    f"{resolution_df['resolving_power'].max():.0f}"
+    "-----------"
 )
 
+
 print(
-    f"R mean:              "
-    f"{resolution_df['resolving_power'].mean():.0f}"
+    f"Delta X range:             "
+    f"{results_df['delta_x_um'].min():.3f} - "
+    f"{results_df['delta_x_um'].max():.3f} um"
+)
+
+
+print(
+    f"Mean Delta X:              "
+    f"{results_df['delta_x_um'].mean():.3f} um"
+)
+
+
+print(
+    f"Delta Y range:             "
+    f"{results_df['delta_y_um'].min():.3f} - "
+    f"{results_df['delta_y_um'].max():.3f} um"
+)
+
+
+print(
+    f"Mean Delta Y:              "
+    f"{results_df['delta_y_um'].mean():.3f} um"
 )
 
 
 print()
 
-
 print(
-    "Saved:"
+    "Linear dispersion"
 )
 
 print(
-    spectral_file
+    "-----------------"
+)
+
+
+print(
+    f"Range:                     "
+    f"{results_df['linear_dispersion_A_per_mm'].min():.3f} - "
+    f"{results_df['linear_dispersion_A_per_mm'].max():.3f} A/mm"
+)
+
+
+print(
+    f"Mean:                      "
+    f"{results_df['linear_dispersion_A_per_mm'].mean():.3f} A/mm"
+)
+
+
+print()
+
+print(
+    "Spectral resolution"
 )
 
 print(
-    resolution_file
+    "-------------------"
+)
+
+
+print(
+    f"Delta lambda range:        "
+    f"{results_df['delta_lambda_pm'].min():.3f} - "
+    f"{results_df['delta_lambda_pm'].max():.3f} pm"
+)
+
+
+print(
+    f"R minimum:                 "
+    f"{results_df['resolving_power'].min():.0f}"
+)
+
+
+print(
+    f"R maximum:                 "
+    f"{results_df['resolving_power'].max():.0f}"
+)
+
+
+print(
+    f"R mean:                    "
+    f"{results_df['resolving_power'].mean():.0f}"
+)
+
+
+print()
+
+print(
+    "Results saved to:"
+)
+
+print(
+    output_file
 )
