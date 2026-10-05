@@ -18,6 +18,7 @@ The script reads:
 and compares, wavelength by wavelength and order by order:
 
     omega' = Delta X
+    resolving power R
 
 The following differences are calculated:
 
