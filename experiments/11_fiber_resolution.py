@@ -181,7 +181,7 @@ base_config = (
 zemax_file = (
     PROJECT_DIR
     / "Zemax"
-    / "WP - Con prismas diseñados - camara - theoretical slit.zmx"
+    / "WP - Con prismas diseñados - camara.zmx"
 )
 
 
@@ -262,6 +262,13 @@ reciprocal_dispersion = (
         dtype=float
     )
 )
+
+        
+#       Angstrom / mm        
+linear_dispersion_A_per_mm = (
+    reciprocal_dispersion
+    * 10.0
+)        
 
 
 ##############################################################
@@ -799,6 +806,9 @@ results = pd.DataFrame(
         "reciprocal_dispersion_nm_per_mm":
             reciprocal_dispersion,
 
+        "linear_dispersion_A_per_mm":
+            linear_dispersion_A_per_mm,
+
         "delta_lambda_nm":
             delta_lambda_nm,
 
@@ -828,6 +838,7 @@ results.to_csv(
     output_file,
     index=False
 )
+
 
 
 ##############################################################
@@ -901,16 +912,23 @@ print(
 
 print()
 
-
 print(
-    f"Reciprocal dispersion range: "
-    f"{np.nanmin(reciprocal_dispersion):.6f} - "
-    f"{np.nanmax(reciprocal_dispersion):.6f} nm/mm"
+    "Linear dispersion"
 )
 
 print(
-    f"Mean reciprocal dispersion:  "
-    f"{np.nanmean(reciprocal_dispersion):.6f} nm/mm"
+    "-----------------"
+)
+
+print(
+    f"Range:               "
+    f"{np.nanmin(linear_dispersion_A_per_mm):.3f} - "
+    f"{np.nanmax(linear_dispersion_A_per_mm):.3f} A/mm"
+)
+
+print(
+    f"Mean:                "
+    f"{np.nanmean(linear_dispersion_A_per_mm):.3f} A/mm"
 )
 
 
@@ -954,6 +972,62 @@ print(
     output_file
 )
 
+
+##############################################################
+# Plot linear dispersion
+##############################################################
+
+fig, ax = plt.subplots(
+    figsize=(8, 5)
+)
+
+
+ax.plot(
+    wavelengths_nm,
+    linear_dispersion_A_per_mm,
+    color="black",
+    linewidth=2.0
+)
+
+
+ax.set_xlabel(
+    r"$\mathrm{Wavelength}\;(\mathrm{nm})$",
+    fontsize=18
+)
+
+ax.set_ylabel(
+    r"$\mathrm{Linear\ dispersion}\;(\AA/\mathrm{mm})$",
+    fontsize=18
+)
+
+
+ax.minorticks_on()
+
+
+ax.tick_params(
+    which="major",
+    direction="in",
+    top=True,
+    right=True,
+    length=6,
+    width=2.2,
+    labelsize=16
+)
+
+
+ax.tick_params(
+    which="minor",
+    direction="in",
+    top=True,
+    right=True,
+    length=3,
+    width=1.2
+)
+
+
+fig.tight_layout()
+
+plt.show()
 
 ##############################################################
 # Plot omega'
@@ -1035,7 +1109,7 @@ ax.set_xlabel(
 )
 
 ax.set_ylabel(
-    r"$\Delta\lambda\;(\mathrm{pm})$",
+    r"$\delta\lambda\;(\mathrm{pm})$",
     fontsize=18
 )
 
@@ -1092,7 +1166,7 @@ ax.set_xlabel(
 )
 
 ax.set_ylabel(
-    r"$R=\lambda/\Delta\lambda$",
+    r"$R=\lambda/\delta\lambda$",
     fontsize=18
 )
 
