@@ -195,8 +195,7 @@ methodology before extending it to the complete echelle format.
    common normalized-pupil distribution is traced at each wavelength. Detector
    ray coordinates are used to calculate the wavelength-dependent spectral
    centroid and its trajectory across the image plane. The centroid
-   displacement is then used to derive the local linear and reciprocal
-   spectral dispersion as functions of wavelength.
+   displacement is then used to derive the linear dispersion as functions of wavelength.
 
 9. `09_single_order_spectral_resolution.py` extends the point-source analysis
    of `m = 102` from dispersion to spectral resolution. At each wavelength,
