@@ -48,6 +48,7 @@ repository structure.
   - [`utils/`](#utils)
   - [`Results/`](#results)
   - [`Zemax/`](#zemax)
+- [Running the Analysis](#running-the-analysis)
 - [Zemax Model Interaction](#zemax-model-interaction)
   - [Configuration selection](#configuration-selection)
   - [Reading the MCE](#reading-the-mce)
@@ -339,6 +340,21 @@ distributed with the repository.
 Provides the expected local location for the EMAR Zemax optical model.
 The `.gitkeep` file preserves this directory in Git while its optical
 model contents remain excluded through `.gitignore`.
+
+## Running the Analysis
+
+Before running the EMAR analysis scripts, Zemax OpticStudio must be open and
+the PyZDDE connection must be properly configured. Installation instructions
+and connection examples are available in the official PyZDDE repository and
+can be used to verify the setup before executing the EMAR workflow. A local
+copy of the EMAR Zemax model must also be available in the `Zemax/` directory.
+
+Once the setup has been verified, `experiments/02_single_config_original_waves.py`
+provides a minimal starting point for the EMAR workflow by selecting a single
+configuration, reading its reference wavelengths, and tracing rays to the
+selected optical surface. The subsequent experiments progressively extend this
+procedure to dense wavelength sampling, diffraction-order reconstruction,
+spectral analysis, and finite-source tracing.
 
 ## Zemax Model Interaction
 
