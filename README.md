@@ -6,7 +6,7 @@ framework developed for the Espectrógrafo Mexicano de Alta Resolución (EMAR)
 optical system. The code interfaces with Zemax OpticStudio through PyZDDE and
 provides tools for normalized-pupil sampling, multi-configuration ray tracing,
 wavelength and diffraction-order control through the Zemax Multi-Configuration
-Editor (MCE), spectral-dispersion analysis, and geometrical characterization of
+Editor (MCE), spectral-dispersion analysis, and characterization of
 extended input sources. The interaction between Python and the Zemax
 multi-configuration model, including configuration selection, temporary MCE
 modification, and ray tracing, is described in detail in the
@@ -22,17 +22,14 @@ The current workflow includes:
 
 - normalized-pupil sampling using random or hexapolar distributions;
 - ray tracing of individual and multiple Zemax configurations;
-- reconstruction of intermediate integer echelle orders from `m = 60` to
-  `m = 144`;
+- reconstruction of the complete integer echelle-order sequence from `m = 60`
+  to `m = 144`;
 - dense wavelength sampling across individual and complete echelle orders;
 - visualization of ray footprints and spectral centroid traces at selected
   optical surfaces;
 - detector-style visualization of the complete spectral format;
-- calculation of linear spectral dispersion;
-- spectral-resolution analysis;
-- tracing of finite slit and circular-fiber input sources;
-- wavelength-dependent characterization of the projected fiber image;
-- calculation of spectral resolving power across the complete echelle format;
+- calculation of linear spectral dispersion and resolving power;
+- tracing and characterization of finite slit and circular-fiber input sources;
 - comparison of dense and reduced fiber-field sampling strategies; and
 - analysis of the free separation between adjacent echelle-order
   fiber envelopes.
@@ -202,23 +199,21 @@ methodology before extending it to the complete echelle format.
    spectral dispersion as functions of wavelength.
 
 9. `09_single_order_spectral_resolution.py` extends the point-source analysis
-   of `m = 102` from dispersion to geometrical spectral resolution. At each
-   wavelength, the monochromatic ray footprint produced by the point source is
-   projected onto the local direction of spectral dispersion. The projected
-   footprint width provides a geometrical estimate of the wavelength interval
-   associated with the monochromatic image and therefore of the
-   wavelength-dependent resolving power. This experiment establishes the
-   resolution-analysis procedure before replacing the point source with a
-   finite physical entrance source.
+   of `m = 102` from dispersion to spectral resolution. At each wavelength,
+   the monochromatic ray footprint produced by the point source is projected
+   onto the local direction of spectral dispersion. The projected footprint
+   width is used to estimate the wavelength interval associated with the
+   monochromatic image and the corresponding resolving power. This experiment
+   establishes the resolution-analysis procedure before replacing the point
+   source with a finite entrance source.
 
-10. `10_theoretical_slit.py` introduces a finite rectangular source at the
-    spectrograph input to replace the point-field approximation used in the
-    preceding experiments. A theoretical `50 × 15 µm` slit is mapped onto the
-    corresponding Zemax field coordinates and sampled over its physical
-    extent. Rays from each slit position are traced through the pupil and onto
-    the detector. The resulting finite-source footprints are projected along
+10. `10_theoretical_slit.py` replaces the point source with a finite
+    rectangular slit at the spectrograph input. A theoretical `50 × 15 µm`
+    slit is mapped onto the corresponding Zemax field coordinates and sampled
+    across its extent. Rays from each slit position are traced through the
+    pupil and onto the detector. The resulting footprints are projected along
     the local spectral direction to determine the projected slit width,
-    spectral purity, and geometrical resolving power across order `m = 102`.
+    spectral purity, and resolving power across order `m = 102`.
 
 11. `11_fiber_resolution.py` replaces the rectangular slit with the circular
     fiber geometry relevant to the instrument. A `100 µm` input fiber is
@@ -231,27 +226,21 @@ methodology before extending it to the complete echelle format.
     wavelength-dependent X and Y dimensions of the projected fiber image and
     to calculate its corresponding spectral resolving power.
 
-12. `12_full_spectral_format.py` extends the validated `100 µm` fiber
-    calculation from the representative order to the complete reconstructed
-    echelle format. All integer orders from `m = 60` to `m = 144` are sampled
-    at 100 wavelengths. At every wavelength, 91 fiber positions are combined
-    with 91 pupil rays, retaining the dense source and pupil
-    sampling established in the single-order experiment. The resulting
-    detector coordinates are used to calculate the fiber centroid, X-Y
-    envelope, linear spectral dispersion, projected spectral width, and
-    resolving power throughout all 85 diffraction orders. The same results
-    also provide the projected fiber envelopes required for subsequent
-    analysis of the physical spacing between neighboring spectral orders.
+12. `12_full_spectral_format.py` extends the `100 µm` fiber analysis from
+    `m = 102` to all integer orders from `m = 60` to `m = 144`. Each order is
+    sampled at 100 wavelengths, retaining the 91 fiber positions and 91 pupil
+    rays established in the preceding experiment. The resulting detector
+    coordinates are used to calculate the fiber centroid, X-Y envelope, linear
+    spectral dispersion, projected spectral width, and resolving power across
+    all 85 diffraction orders. These results also provide the fiber envelopes
+    required for the subsequent analysis of spacing between neighboring orders.
 
-13. `13_five_field_fiber_spectrum.py` evaluates whether the computational
-    cost of the complete-format fiber calculation can be reduced by replacing
-    the 91 source positions with five representative fiber fields. The reduced
-    geometry samples the fiber center together with the positive and negative
-    extrema along X and Y, while retaining the 91-ray hexapolar pupil and
-    100 wavelengths per order. The complete sequence from `m = 60` to
-    `m = 144` is traced using this representation, providing a direct
-    alternative to the dense 91-field calculation without changing the
-    wavelength or pupil sampling.
+13. `13_five_field_fiber_spectrum.py` evaluates a reduced source-sampling
+    strategy by replacing the 91 fiber positions with five representative
+    fields: the center and the positive and negative extrema along X and Y.
+    The 91-ray hexapolar pupil and 100 wavelengths per order are retained.
+    The complete `m = 60–144` sequence is then traced to provide a
+    computationally faster alternative to the 91-field calculation.
 
 14. `14_compare_fiber_sampling.py` benchmarks the five-field representation
     against the robust 91-field reference without performing additional Zemax
@@ -265,18 +254,16 @@ methodology before extending it to the complete echelle format.
     envelope while providing a faster reduced representation for exploratory
     calculations.
 
-15. `15_order_separation.py` uses the robust 91-field results to quantify the
-    free geometrical space between projected fiber envelopes in adjacent
-    echelle orders. For every neighboring pair from `m = 60–61` through
-    `m = 143–144`, the two order envelopes are evaluated over their common
-    detector-X interval. Their Y boundaries are interpolated at common X
-    coordinates, and the edge-to-edge free separation is calculated between
-    the upper boundary of the lower trace and the lower boundary of the upper
-    trace. Minimum, maximum, mean, and median separations are determined for
-    every adjacent-order pair together with the detector-X locations of the
-    extrema. Representative separation profiles are also evaluated across the
-    detector, providing the geometrical reference required for subsequent
-    multi-fiber and polarimetric configurations.
+15. `15_order_separation.py` uses the 91-field fiber envelopes to quantify
+    the free space between adjacent echelle orders. For every neighboring pair
+    from `m = 60–61` through `m = 143–144`, the two envelopes are evaluated
+    over their common detector-X interval. Their Y boundaries are interpolated
+    at common X coordinates, and the edge-to-edge separation is calculated
+    between the neighboring envelope boundaries. Minimum, maximum, mean, and
+    median separations are determined for each order pair together with the
+    detector-X locations of the extrema. Representative separation profiles
+    are also evaluated across the detector, providing the reference for
+    subsequent multi-fiber and polarimetric configurations.
 
 
 ### `utils/`
@@ -313,7 +300,7 @@ Single-order analysis products include:
   centroid and spectral-dispersion measurements for `m = 102`;
 - `order_102_rays.csv`, containing the corresponding individual detector ray
   coordinates;
-- `order_102_theoretical_slit_resolution.csv`, containing the geometrical
+- `order_102_theoretical_slit_resolution.csv`, containing the
   spectral-resolution analysis for the finite theoretical slit; and
 - `order_102_fiber_resolution.csv`, containing the projected `100 µm` fiber
   dimensions and resolving-power analysis for `m = 102`.
@@ -405,22 +392,24 @@ the ray trace is performed. The sequence for a sampled wavelength is therefore:
 
 ### Ray tracing
 
-For each sampled wavelength, a set of points from the normalized pupil is
-traced to the selected optical surface using `zGetTrace()`. The pupil is
-sampled using a random distribution within the normalized circular aperture,
-with the number of rays defined according to the analysis. Initial spectral
-reconstruction experiments typically use 100 pupil rays for each of the
-100 sampled wavelengths.
+For each sampled wavelength, rays are traced to the selected optical surface
+using `zGetTrace()`. The sampling strategy is configurable independently for
+the source field and the normalized pupil, with random and hexapolar
+distributions available depending on the analysis. For point-source analyses,
+a single field position is combined with random sampling of the normalized
+pupil. Finite-slit analyses use random sampling across both the source field
+and the pupil. For the circular-fiber analysis, both are sampled using
+hexapolar distributions.
 
-For the extended-source analysis, an additional sampling level is introduced
-to represent the physical extent of the input source. In the robust
-full-format fiber calculation, the `100 µm` circular fiber is represented by
-91 field positions arranged in a five-ring hexapolar distribution. A
-normalized-pupil sample is independently traced from each fiber position at
-each wavelength. Each diffraction order is sampled at 100 wavelengths. A
-reduced five-field representation of the fiber is also implemented and
-benchmarked against the dense 91-field calculation.
-
+In the full-format fiber calculation, the `100 µm` circular fiber is sampled
+with 91 field positions arranged in a five-ring hexapolar distribution, and
+each field position is traced through 91 normalized-pupil positions generated
+with an independent five-ring hexapolar distribution. Each diffraction order
+is sampled at 100 wavelengths. A reduced five-field representation of the
+fiber is also implemented and benchmarked against the 91-field calculation.
+In this case, only the source-field sampling is reduced to the fiber center and
+the four extrema along X and Y, while the 91-point hexapolar pupil sampling is
+retained.
 For the initial multi-configuration spectral reconstruction, the tracing
 sequence can be represented conceptually as:
 
@@ -497,30 +486,27 @@ For each order:
 7. Restore the original diffraction-order and wavelength values before
    continuing.
 
-The procedure therefore reconstructs the spectral parameters required
-by Zemax rather than interpolating detector coordinates. The X-Y
-positions of the reconstructed orders are obtained directly from ray
-tracing through the optical model. For the current dense analysis, 100 
-wavelengths are sampled for each of the 85 diffraction orders, 
-with 100 normalized pupil rays traced at each wavelength.
+The procedure therefore reconstructs the spectral parameters required by
+Zemax rather than interpolating detector coordinates. The X-Y positions of
+the reconstructed orders are obtained directly from ray tracing through the
+optical model. In `EMAR_full_orders.py`, each of the 85 diffraction orders is
+sampled at 100 wavelengths with 100 normalized-pupil rays per wavelength.
 
 ## Current Analysis Status
 
-The current workflow provides a complete single-fiber analysis of
-the EMAR echelle format from `m = 60` to `m = 144`. The robust 91-field
-calculation traces a circular `100 µm` input fiber across all 85 integer
-diffraction orders and provides wavelength-dependent projected fiber
-dimensions, spectral dispersion, resolving power, and adjacent-order free
-separation. A reduced five-field source representation was benchmarked against
-the 91-field reference, reproducing the wavelength-dependent behavior of the
-projected fiber and resolving power at substantially lower computational cost.
-The dense 91-field solution is retained as the reference for geometrical
-envelope and order-separation analyses.
+The current workflow provides a complete single-fiber analysis of the EMAR
+echelle format from `m = 60` to `m = 144`. The 91-field calculation traces a
+circular `100 µm` input fiber across all 85 integer diffraction orders and
+provides wavelength-dependent projected fiber dimensions, spectral dispersion,
+resolving power, and adjacent-order separation. A reduced five-field source
+representation was benchmarked against the 91-field solution, reproducing the
+wavelength-dependent behavior of the projected fiber and resolving power at
+substantially lower computational cost. The 91-field solution is retained for
+fiber-envelope and order-separation analyses.
 
-Across the complete spectral format, the projected single-fiber envelopes of
-adjacent echelle orders remain separated, with the limiting
-edge-to-edge separation of approximately `141 µm` occurring between orders
-`m = 60` and `m = 61`. This single-fiber analysis establishes the geometrical
-reference for the next development stage: tracing multiple fiber images within
-each echelle order and evaluating their compatibility with a dual-beam
-polarimetric configuration
+Across the complete spectral format, adjacent single-fiber envelopes remain
+separated, with a minimum edge-to-edge distance of approximately `141 µm`
+between orders `m = 60` and `m = 61`. These results provide the reference for
+the next development stage: tracing multiple fiber images within each echelle
+order and evaluating their compatibility with a dual-beam polarimetric
+configuration.
