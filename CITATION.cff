@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+
+title: "EMAR Spectral Ray-Tracing Analysis"
+
+authors:
+  - family-names: "Nájera Roa"
+    given-names: "Morgan Rhaí"
+    orcid: "https://orcid.org/0000-0003-3283-0407"
+
+repository-code: "https://github.com/MNajeraR/EMAR-Spectral-Ray-Tracing"
+
+license: "BSD-3-Clause"
+
+version: "1.0.0"
+
+abstract: >-
+  Python-based ray-tracing and spectral-analysis framework developed for
+  the Espectrógrafo Mexicano de Alta Resolución (EMAR).
