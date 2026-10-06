@@ -4,13 +4,10 @@
 This repository contains a Python-based ray-tracing and spectral-analysis
 framework developed for the Espectrógrafo Mexicano de Alta Resolución (EMAR)
 optical system. The code interfaces with Zemax OpticStudio through PyZDDE and
-provides tools for normalized-pupil sampling, multi-configuration ray tracing,
-wavelength and diffraction-order control through the Zemax Multi-Configuration
-Editor (MCE), spectral-dispersion analysis, and characterization of
-extended input sources. The interaction between Python and the Zemax
-multi-configuration model, including configuration selection, temporary MCE
-modification, and ray tracing, is described in detail in the
-[Zemax Model Interaction](#zemax-model-interaction) section. The Zemax model
+provides tools for configurable field and normalized-pupil sampling,
+multi-configuration ray tracing, wavelength and diffraction-order control
+through the Zemax Multi-Configuration Editor (MCE), spectral-dispersion
+analysis, and characterization of extended input sources. The Zemax model
 contains 13 representative configurations associated with echelle diffraction
 orders spanning from `m = 60` to `m = 144`, with each configuration defining
 11 reference wavelengths through the MCE. The framework was developed
@@ -32,8 +29,8 @@ The current workflow includes:
 - calculation of linear spectral dispersion and resolving power;
 - tracing and characterization of finite slit and circular-fiber input sources;
 - comparison of dense and reduced fiber-field sampling strategies; and
-- analysis of the free separation between adjacent echelle-order
-  fiber envelopes.
+- analysis of the free separation between adjacent echelle-order fiber
+  envelopes.
 
 A circular `100 µm` fiber is used to establish a single-fiber reference across
 all 85 integer diffraction orders, providing the basis for subsequent studies
@@ -42,6 +39,21 @@ optical model is intentionally not distributed with this repository; users
 with authorized access to the EMAR model can place their local copy in the
 `Zemax/` directory and use the analysis scripts without modifying the
 repository structure.
+
+## Contents
+
+- [Repository Structure](#repository-structure)
+  - [`scripts/`](#scripts)
+  - [`experiments/`](#experiments)
+  - [`utils/`](#utils)
+  - [`Results/`](#results)
+  - [`Zemax/`](#zemax)
+- [Zemax Model Interaction](#zemax-model-interaction)
+  - [Configuration selection](#configuration-selection)
+  - [Reading the MCE](#reading-the-mce)
+  - [Temporary wavelength modification](#temporary-wavelength-modification)
+  - [Ray tracing](#ray-tracing)
+- [Current Analysis Status](#current-analysis-status)
 
 ## Repository Structure
 
@@ -330,17 +342,10 @@ model contents remain excluded through `.gitignore`.
 
 ## Zemax Model Interaction
 
-The analysis scripts interact with the Zemax multi-configuration model
-through PyZDDE. The workflow is organized as a nested process in which
-each configuration is selected, spectrally sampled, and ray traced
-before proceeding to the next one:
-
-1. Select a Zemax configuration.
-2. Read its Multi-Configuration Editor (MCE) data.
-3. Generate the wavelength sampling for that configuration.
-4. Sequentially modify and trace each sampled wavelength.
-5. Restore the original MCE values.
-6. Continue with the next configuration.
+The analysis scripts interact with the Zemax multi-configuration model through
+PyZDDE. Configurations and MCE parameters are read and temporarily modified as
+required by each analysis, while the original model state is restored after
+ray tracing.
 
 ### Configuration selection
 
@@ -364,8 +369,8 @@ sampling, the first and last reference wavelengths define the spectral interval:
     WAVE 1  -> minimum wavelength
     WAVE 11 -> maximum wavelength
 
-A set of 100 equally spaced wavelengths is generated between these two
-limits for the active configuration.
+For dense spectral sampling, 100 equally spaced wavelengths are generated
+between these two limits.
 
 ### Temporary wavelength modification
 
@@ -407,6 +412,7 @@ fiber is also implemented and benchmarked against the 91-field calculation.
 In this case, only the source-field sampling is reduced to the fiber center and
 the four extrema along X and Y, while the 91-point hexapolar pupil sampling is
 retained.
+
 For the initial multi-configuration spectral reconstruction, the tracing
 sequence can be represented conceptually as:
 
@@ -448,8 +454,8 @@ additional fiber-position sampling:
         └──> wavelength 100
                 └──> fiber positions -> pupil samples -> ray tracing
 
-where `N = 91` for the robust hexapolar representation of the circular fiber
-and `N = 5` for the reduced fiber-field sampling experiment.
+where `N = 91` for the full hexapolar fiber sampling and `N = 5` for the
+reduced fiber-field sampling experiment.
 
 After the sampled wavelengths of a configuration have been traced, the
 original `WAVE 1` value is restored in the MCE and the model is updated again
@@ -460,14 +466,14 @@ subsequent configurations or analyses.
 ## Current Analysis Status
 
 The current workflow provides a complete single-fiber analysis of the EMAR
-echelle format from `m = 60` to `m = 144`. The 91-field calculation traces a
-circular `100 µm` input fiber across all 85 integer diffraction orders and
-provides wavelength-dependent projected fiber dimensions, spectral dispersion,
-resolving power, and adjacent-order separation. A reduced five-field source
-representation was benchmarked against the 91-field solution, reproducing the
-wavelength-dependent behavior of the projected fiber and resolving power at
-substantially lower computational cost. The 91-field solution is retained for
-fiber-envelope and order-separation analyses.
+echelle format from `m = 60` to `m = 144`. A circular `100 µm` input fiber is
+traced across all 85 integer diffraction orders using the 91-field sampling,
+providing wavelength-dependent projected fiber dimensions, spectral dispersion,
+resolving power, and adjacent-order separation. A reduced five-field sampling
+was benchmarked against this solution, reproducing the wavelength-dependent
+behavior of the projected fiber and resolving power at substantially lower
+computational cost. The 91-field results are retained for fiber-envelope and
+order-separation analyses.
 
 Across the complete spectral format, adjacent single-fiber envelopes remain
 separated, with a minimum edge-to-edge distance of approximately `141 µm`
