@@ -1,5 +1,7 @@
 # EMAR Spectral Ray-Tracing Analysis
+
 [![DOI](https://zenodo.org/badge/1363089025.svg)](https://doi.org/10.5281/zenodo.23198727)
+
 ## Overview
 
 This repository contains a Python-based ray-tracing and spectral-analysis
