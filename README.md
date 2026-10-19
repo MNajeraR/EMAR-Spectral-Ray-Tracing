@@ -5,43 +5,52 @@
 ## Overview
 
 This repository contains a Python-based ray-tracing and spectral-analysis
-framework developed for the Espectrógrafo Mexicano de Alta Resolución (EMAR)
-optical system. The code interfaces with Zemax OpticStudio through PyZDDE and
-provides tools for configurable field and normalized-pupil sampling,
-multi-configuration ray tracing, wavelength and diffraction-order control
-through the Zemax Multi-Configuration Editor (MCE), spectral-dispersion
-analysis, and characterization of extended input sources. The Zemax model
-contains 13 representative configurations associated with echelle diffraction
-orders spanning from `m = 60` to `m = 144`, with each configuration defining
-11 reference wavelengths through the MCE. The framework was developed
-progressively, beginning with individual pupil and wavelength tests and
-extending to the reconstruction and analysis of the complete integer
-echelle-order sequence.
+framework developed for the Espectrógrafo Mexicano de Alta Resolución (EMAR),
+a fiber-fed, high-resolution echelle spectrograph. The framework interfaces
+with Zemax OpticStudio through PyZDDE, providing computational tools for
+investigating the optical performance and spectral characteristics of the
+instrument. The Zemax optical model contains 13 representative configurations associated
+with echelle diffraction orders spanning from `m = 60` to `m = 144`, each
+defining 11 reference wavelengths through the Multi-Configuration Editor
+(MCE). The framework was developed progressively, beginning with individual
+ray-tracing experiments and extending to the reconstruction of the complete
+sequence of 85 integer diffraction orders. A circular `100 µm` fiber is used
+as the reference input source for characterizing the resulting spectral
+format on the detector.
 
 The current workflow includes:
 
-- configurable field and normalized-pupil sampling using random or hexapolar
-  distributions;
-- ray tracing of individual and multiple Zemax configurations;
-- reconstruction of the complete integer echelle-order sequence from `m = 60`
-  to `m = 144`;
-- dense wavelength sampling across individual and complete echelle orders;
-- visualization of ray footprints and spectral centroid traces at selected
-  optical surfaces;
-- detector-style visualization of the complete spectral format;
-- calculation of linear spectral dispersion and resolving power;
-- tracing and characterization of finite slit and circular-fiber input sources;
-- comparison of dense and reduced fiber-field sampling strategies; and
-- analysis of the free separation between adjacent echelle-order fiber
-  envelopes.
+- Configurable field and normalized-pupil sampling using random or hexapolar
+  distributions.
+- Multi-configuration ray tracing and dense wavelength sampling across
+  individual and complete echelle orders.
+- Visualization of ray footprints, spectral centroid traces, and the
+  complete detector spectral format.
+- Calculation of linear dispersion and resolving power.
+- Characterization of extended input sources, including finite slits and
+  circular fibers.
+- Comparison of fiber-field sampling strategies and evaluation of
+  inter-order separation.
+- Modeling of spatially separated polarimetric images and their mapping
+  onto the detector.
+- Geometric clearance and overlap analysis between adjacent diffraction
+  orders.
+- Reconstruction and visualization of the complete polarimetric spectral
+  format across all 85 integer echelle orders.
 
-A circular `100 µm` fiber is used to establish a single-fiber reference across
-all 85 integer diffraction orders, providing the basis for subsequent studies
-of multiple fiber traces and polarimetric configurations. The original Zemax
-optical model is intentionally not distributed with this repository; users
-with authorized access to the EMAR model can place their local copy in the
-`Zemax/` directory and use the analysis scripts without modifying the
-repository structure.
+The framework has subsequently been extended to investigate the geometric
+requirements of a potential spectropolarimetric configuration. In this
+approach, the two polarization components are represented as spatially
+separated images of the same input fiber, following the action of a
+polarization-splitting element. Their relative displacement at the
+spectrograph entrance is treated as a geometrical parameter, allowing
+the available detector space and potential overlap between adjacent
+spectral orders to be evaluated without explicitly modeling the
+polarization-splitting optics. The original Zemax optical model is intentionally not distributed with
+this repository. Users with authorized access to the EMAR model should
+place the file `WP - Con prismas diseñados - camara.zmx` in the `Zemax/`
+directory to reproduce the analyses without modifying the repository
+structure.
 
 ## Contents
 
@@ -62,20 +71,23 @@ repository structure.
 ## Repository Structure
 
 The repository is organized to separate the main analysis scripts,
-reusable functions, validation experiments, generated results, and the
+reusable functions, experiments, results, and the
 local Zemax optical model.
 
 ```text
 EMAR/
 ├── README.md
 ├── requirements.txt
+├── CITATION.cff
+├── LICENSE
 ├── .gitignore
 │
 ├── scripts/
-│   ├── EMAR_All_confs_surf26.py
+│   ├── EMAR_All_conf_surf_26.py
 │   ├── EMAR_All_confs_surf54.py
 │   ├── EMAR_missing_orders.py
-│   └── EMAR_full_orders.py
+│   ├── EMAR_full_orders.py
+│   └── EMAR_polarimetric_all_orders.py
 │
 ├── experiments/
 │   ├── 01_pupil_sampling.py
@@ -89,10 +101,14 @@ EMAR/
 │   ├── 09_single_order_spectral_resolution.py
 │   ├── 10_theoretical_slit.py
 │   ├── 11_fiber_resolution.py
-│   ├── 12_full_spectral_format.py
+│   ├── 12_full_fiber_spectrum.py
 │   ├── 13_five_field_fiber_spectrum.py
 │   ├── 14_compare_fiber_sampling.py
-│   └── 15_order_separation.py
+│   ├── 15_order_separation.py
+│   ├── 16_polarimetric_image_geometry.py
+│   ├── 17_polarimetric_field_mapping.py
+│   ├── 18_polarimetric_separation_scan.py
+│   └── 19_polarimetric_adjacent_orders.py
 │
 ├── utils/
 │   ├── __init__.py
@@ -101,15 +117,20 @@ EMAR/
 │
 ├── Results/
 │   ├── echelle_orders_60_144.csv
-│   ├── order_102_dispersion.csv
-│   ├── order_102_rays.csv
-│   ├── order_102_theoretical_slit_resolution.csv
-│   ├── order_102_fiber_resolution.csv
-│   ├── full_orders_fiber_resolution.csv
-│   ├── full_orders_fiber_resolution_5fields.csv
-│   ├── fiber_sampling_comparison.csv
-│   ├── fiber_sampling_statistics_by_order.csv
-│   └── order_separation_91fields.csv
+│   ├── ...
+│   ├── polarimetric_envelopes_m60_61_d*.csv
+│   ├── polarimetric_clearance_m60_61_d*.csv
+│   ├── polarimetric_first_contact_m60_61_*
+│   └── polarimetric_all_orders_d350um/
+│       ├── envelopes/
+│       │   ├── m60_d350um_100w_9fields.csv
+│       │   ├── ...
+│       │   └── m144_d350um_100w_9fields.csv
+│       ├── 01_full_spectral_format.png
+│       ├── 02_orders_60_61_zoom.png
+│       ├── 03_detector_true_aspect.png
+│       ├── adjacent_order_clearance.csv
+│       └── polarimetric_envelopes_m60_144.csv
 │
 └── Zemax/
     └── .gitkeep
@@ -120,7 +141,7 @@ EMAR/
 Contains the main analysis scripts used to study the EMAR optical
 system at selected stages of the spectrograph.
 
-- `EMAR_All_confs_surf26.py` traces the 13 original Zemax
+- `EMAR_All_confs_surf_26.py` traces the 13 original Zemax
   configurations to surface 26 using dense wavelength sampling.
   Surface 26 corresponds to the second focal plane of the system. Before
   reaching this surface, the beam is collimated by the first off-axis
@@ -152,15 +173,26 @@ system at selected stages of the spectrograph.
   resulting ray data can be visualized as complete ray footprints, spectral
   centroid traces, or a simplified detector representation.
 
+- `EMAR_polarimetric_all_orders.py` extends the complete echelle-order
+  analysis to a potential spectropolarimetric configuration. Two spatially
+  separated images of a single circular fiber are traced across all 85
+  diffraction orders (`m = 60–144`). The script reconstructs their detector
+  envelopes, evaluates geometric clearance and overlap between adjacent
+  orders, and generates three complementary visualizations: the complete
+  polarimetric spectral format, a detailed view of orders 60 and 61, and
+  a detector representation preserving the physical aspect ratio.
+  Ray-tracing results are cached to avoid unnecessary repeated calculations.
+
 ### `experiments/`
 
-Contains the progressive validation experiments used during development of the
-EMAR ray-tracing and spectral-analysis framework. The experiments document the
-transition from basic pupil-sampling and single-configuration tests to
-diffraction-order reconstruction, spectral-dispersion and resolution analysis,
-finite-source modeling, complete-format fiber tracing, and adjacent-order
-separation analysis. Each experiment isolates a specific step of the
-methodology before extending it to the complete echelle format.
+Contains the individual experiments used to develop and validate the
+computational procedures implemented in the main analysis scripts.
+Rather than executing the complete spectral analysis, each experiment
+focuses on a specific numerical or geometrical problem, allowing the
+underlying assumptions, sampling strategies, and ray-tracing results
+to be examined independently. The sequence also documents how the
+methods were refined before being extended to more complex
+configurations.
 
 1. `01_pupil_sampling.py` visualizes and validates the normalized-pupil
    sampling methods used by the ray-tracing routines. Random and deterministic
@@ -242,12 +274,12 @@ methodology before extending it to the complete echelle format.
     wavelength-dependent X and Y dimensions of the projected fiber image and
     to calculate its corresponding spectral resolving power.
 
-12. `12_full_spectral_format.py` extends the `100 µm` fiber analysis from
+12. `12_full_fiber_spectrum.py` extends the `100 µm` fiber analysis from
     `m = 102` to all integer orders from `m = 60` to `m = 144`. Each order is
     sampled at 100 wavelengths, retaining the 91 fiber positions and 91 pupil
     rays established in the preceding experiment. The resulting detector
     coordinates are used to calculate the fiber centroid, X-Y envelope, linear
-    spectral dispersion, projected spectral width, and resolving power across
+    dispersion, projected spectral width, and resolving power across
     all 85 diffraction orders. These results also provide the fiber envelopes
     required for the subsequent analysis of spacing between neighboring orders.
 
@@ -278,65 +310,158 @@ methodology before extending it to the complete echelle format.
     are also evaluated across the detector, providing the reference for
     subsequent multi-fiber and polarimetric configurations.
 
+16. `16_polarimetric_image_geometry.py` introduces the geometrical
+    representation of two spatially separated polarimetric images at
+    the spectrograph entrance. The experiment establishes the
+    relationship between their center-to-center displacement and
+    edge-to-edge separation, considering the finite diameter of the
+    input fiber. Each circular image is represented by its center
+    and eight boundary points, providing a consistent geometrical
+    description for the subsequent ray-tracing experiments.
 
+17. `17_polarimetric_field_mapping.py` investigates the transformation
+    between physical coordinates at the spectrograph entrance and
+    the normalized field coordinates required by Zemax. The
+    geometrical representation established in the preceding
+    experiment is translated into field positions and propagated
+    through the optical system. The resulting detector footprints
+    are examined to determine how the relative position of the
+    input images is transformed by the spectrograph.
+
+18. `18_polarimetric_separation_scan.py` examines how the separation
+    between two polarimetric images affects their projected footprints
+    on the detector for diffraction order `m = 60` at a single
+    reference wavelength. Center-to-center separations from 110 to
+    115 µm are evaluated in increments of 0.5 µm, using nine field
+    points per image and 91 hexapolar pupil rays per field.
+    Convex-hull representations of the resulting ray distributions
+    are used to calculate the overlap area and minimum distance
+    between the projected images. This experiment establishes how
+    their geometrical overlap varies with entrance separation before
+    extending the analysis to neighboring diffraction orders.
+
+19. `19_polarimetric_adjacent_orders.py` extends the geometrical
+    analysis to the neighboring diffraction orders `m = 60` and
+    `m = 61`, identified in Experiment 15 as the pair with the
+    minimum inter-order separation across the complete echelle
+    format. This pair provides a reference case for investigating
+    the available detector space when two polarimetric images are
+    introduced. Both images are traced across 100 wavelengths per
+    order, using nine field points and 91 pupil rays per field.
+    The detector envelopes are reconstructed from the sampled
+    ray distributions and interpolated over a common detector-X
+    interval. The four possible image combinations between the
+    two orders are evaluated to determine their minimum geometric
+    clearance and identify regions of envelope overlap. The
+    resulting procedure provides the basis for extending the
+    clearance analysis to all adjacent diffraction-order pairs.
+    
 ### `utils/`
 
-Contains reusable functions shared by the analysis and experimental
-scripts.
+Provides the shared computational and visualization functions used
+throughout the repository, separating reusable operations from the
+individual analysis workflows.
 
-- `emar_utils.py` contains project paths, pupil-sampling routines,
-  PyZDDE ray-tracing functions, multi-configuration tracing tools, and
-  reusable functions for tracing original and reconstructed echelle
-  diffraction orders while preserving and restoring the original MCE
-  state.
+- `emar_utils.py` contains project paths, normalized-pupil sampling
+  routines, PyZDDE ray-tracing functions, and multi-configuration
+  tracing utilities. It also provides functions for tracing original
+  and reconstructed echelle diffraction orders while preserving and
+  restoring the original MCE state.
 
-- `emar_plots.py` contains reusable visualization routines for pupil
-  sampling, multi-configuration footprints, and the complete echelle
-  spectral format. Echelle-order results can be displayed as full ray
-  footprints, centroid spectral traces, or detector-style
-  representations. Scientific echelle views use a continuous
-  diffraction-order color scale, with lower orders represented toward
-  red and higher orders toward blue.
+- `emar_plots.py` contains visualization routines for pupil sampling,
+  multi-configuration ray footprints, and the complete echelle spectral
+  format. Results can be displayed as individual ray distributions,
+  spectral centroid traces, or detector-style representations.
+  Echelle-order visualizations use a continuous color scale, with
+  lower diffraction orders represented toward red and higher orders
+  toward blue.
 
 ### `Results/`
 
-Contains numerical products and reproducible analysis outputs generated by the
-scripts and validation experiments. The master spectral definition,
-`echelle_orders_60_144.csv`, contains the complete integer echelle-order
-sequence from `m = 60` to `m = 144`, identifying each order as `ORIGINAL` or
-`NEW` and providing the 11 reference wavelengths used for subsequent spectral
-sampling.
+Contains numerical datasets and analysis products generated by the
+main scripts and validation experiments. The master spectral definition, 
+`echelle_orders_60_144.csv`, identifies
+each diffraction order as `ORIGINAL` or `NEW` and provides the 11
+reference wavelengths used to construct the corresponding spectral
+sampling grids.
 
 Single-order analysis products include:
 
-- `order_102_dispersion.csv`, containing the wavelength-dependent detector
-  centroid and spectral-dispersion measurements for `m = 102`;
-- `order_102_rays.csv`, containing the corresponding individual detector ray
-  coordinates;
+- `order_102_dispersion.csv`, containing the wavelength-dependent
+  detector centroid and linear spectral dispersion for `m = 102`;
+- `order_102_rays.csv`, containing the corresponding individual
+  detector ray coordinates;
 - `order_102_theoretical_slit_resolution.csv`, containing the
   spectral-resolution analysis for the finite theoretical slit; and
-- `order_102_fiber_resolution.csv`, containing the projected `100 µm` fiber
+- `order_102_fiber_resolution.csv`, containing the projected fiber
   dimensions and resolving-power analysis for `m = 102`.
 
 Complete-format fiber products include:
 
-- `full_orders_fiber_resolution.csv`, the 91-field fiber analysis for
-  all 85 integer diffraction orders;
-- `full_orders_fiber_resolution_5fields.csv`, the corresponding reduced
-  five-field calculation;
-- `fiber_sampling_comparison.csv`, containing the wavelength-by-wavelength
-  comparison between both fiber-sampling strategies;
+- `full_orders_fiber_resolution.csv`, containing the 91-field fiber
+  analysis across all 85 diffraction orders;
+- `full_orders_fiber_resolution_5fields.csv`, containing the
+  corresponding reduced five-field calculation;
+- `fiber_sampling_comparison.csv`, containing the wavelength-dependent
+  comparison between the two sampling strategies;
 - `fiber_sampling_statistics_by_order.csv`, containing the comparison
   statistics summarized by diffraction order; and
 - `order_separation_91fields.csv`, containing the free-separation
-  statistics for adjacent echelle-order fiber envelopes.
+  statistics between adjacent echelle-order fiber envelopes.
 
-The analysis scripts also generate figures for local inspection of the
-spectral format, dispersion, projected fiber dimensions, resolving power,
-sampling comparisons, and adjacent-order separation. These generated image
-files are excluded from version control through `.gitignore` and are not
-distributed with the repository.
+Polarimetric analysis products include:
 
+- `polarimetric_envelopes_m60_61_d*_100w_9fields.csv`, containing
+  the detector envelopes of the two polarimetric images for orders
+  `m = 60` and `m = 61` at different input-image separations.
+  Each calculation uses 100 wavelengths per order and nine field
+  points per image.
+
+- `polarimetric_clearance_m60_61_d*.csv`, containing the geometric
+  clearance measurements between adjacent-order polarimetric
+  envelopes for the corresponding input-image separations.
+
+- `polarimetric_first_contact_m60_61_d500um.csv`, containing
+  results associated with the investigation of the first
+  geometrical contact between the polarimetric envelopes
+  of orders `m = 60` and `m = 61`.
+
+- `polarimetric_all_orders_d350um/`, containing the complete
+  polarimetric spectral-format analysis for a center-to-center
+  input-image separation of 350 µm.
+
+Within `polarimetric_all_orders_d350um/`, the numerical results
+are organized as follows:
+
+- `envelopes/` contains 85 individual CSV files, one for each
+  diffraction order from `m = 60` to `m = 144`. Each file follows
+  the naming convention `m{order}_d350um_100w_9fields.csv` and
+  stores the corresponding detector-envelope data. These files
+  allow previously computed order envelopes to be reused without
+  repeating the Zemax ray tracing.
+
+- `polarimetric_envelopes_m60_144.csv` consolidates the
+  reconstructed polarimetric envelopes across the complete
+  diffraction-order sequence.
+
+- `adjacent_order_clearance.csv` contains the geometric clearance
+  measurements between neighboring polarimetric order envelopes
+  across the complete spectral format.
+
+The directory also contains three complementary visualizations:
+
+- `01_full_spectral_format.png`, showing the complete polarimetric
+  spectral format across all 85 diffraction orders;
+- `02_orders_60_61_zoom.png`, providing a detailed view of the
+  neighboring orders identified as having the smallest
+  inter-order separation; and
+- `03_detector_true_aspect.png`, displaying the complete spectral
+  format while preserving the physical detector aspect ratio.
+
+The analysis scripts also generate diagnostic figures and intermediate
+ray-tracing products. Selected figures and numerical datasets are
+included in the repository, while other intermediate outputs may
+remain local depending on the analysis configuration.
 
 ### `Zemax/`
 
@@ -346,157 +471,205 @@ model contents remain excluded through `.gitignore`.
 
 ## Running the Analysis
 
-Before running the EMAR analysis scripts, Zemax OpticStudio must be open and
-the PyZDDE connection must be properly configured. Installation instructions and connection examples are available in the
-[official PyZDDE repository](https://github.com/xzos/PyZDDE) and can be used
-to verify the setup before executing the EMAR workflow. A local
-copy of the EMAR Zemax model must also be available in the `Zemax/` directory.
-
-Once the setup has been verified, `experiments/02_single_config_original_waves.py`
-provides a minimal starting point for the EMAR workflow by selecting a single
-configuration, reading its reference wavelengths, and tracing rays to the
-selected optical surface. The subsequent experiments progressively extend this
-procedure to dense wavelength sampling, diffraction-order reconstruction,
-spectral analysis, and finite-source tracing.
+Before running the EMAR analysis scripts, Zemax OpticStudio must be
+open and the PyZDDE connection must be properly configured.
+Installation instructions and connection examples are available in
+the [official PyZDDE repository](https://github.com/xzos/PyZDDE)
+and can be used to verify the setup before executing the EMAR
+workflow. A local copy of the EMAR Zemax model must also be
+available in the `Zemax/` directory. Once the setup has been verified,
+`experiments/02_single_config_original_waves.py` provides a minimal
+starting point by selecting a single configuration, reading its
+reference wavelengths, and tracing rays to the selected optical
+surface. The numbered experiments can then be executed individually to
+examine the development and validation of specific computational
+procedures. The scripts in `scripts/` provide the corresponding
+complete-format analyses, including the reconstruction of all
+integer echelle orders and the evaluation of a potential
+spectropolarimetric configuration.
 
 ## Zemax Model Interaction
 
-The analysis scripts interact with the Zemax multi-configuration model through
-PyZDDE. Configurations and MCE parameters are read and temporarily modified as
-required by each analysis, while the original model state is restored after
-ray tracing.
+The computational workflow relies on reading and temporarily modifying
+the Multi-Configuration Editor (MCE) parameters to perform the required
+ray-tracing analyses. This approach allows the original spectral
+definitions to be extended while preserving the optical model through
+the restoration of its initial configuration and parameters.
 
 ### Configuration selection
 
-The configurations to be analyzed are defined in Python, for example:
+The original Zemax configurations can be selected directly in Python:
 
-    configs = range(1, 14)
+```python
+configs = range(1, 14)
+```
 
-The script iterates over this sequence and activates each configuration
-with `zSetConfig()`. After changing the active configuration,
-`zGetUpdate()` updates the optical system according to the parameters
-associated with that configuration.
+The script iterates over the selected configurations using
+`zSetConfig()`, followed by `zGetUpdate()` to refresh the optical
+system. For reconstructed diffraction orders, the corresponding
+original configuration is selected as a reference, and the required
+echelle order and wavelength parameters are temporarily modified
+through the MCE. This allows intermediate integer orders to be traced
+using the optical model rather than interpolating detector coordinates.
 
 ### Reading the MCE
 
-Once a configuration is selected, `zGetMulticon()` reads the required
-values directly from its MCE entries. Depending on the analysis, these
-values can include the echelle diffraction order and the reference
-wavelengths associated with the selected configuration. For dense spectral 
-sampling, the first and last reference wavelengths define the spectral interval:
+Once a configuration is selected, `zGetMulticon()` reads the
+corresponding MCE entries, including the echelle diffraction order
+and its reference wavelengths. The first and last reference
+wavelengths define the spectral interval used to generate a grid
+of 100 equally spaced wavelengths for dense spectral sampling:
 
-    WAVE 1  -> minimum wavelength
-    WAVE 11 -> maximum wavelength
-
-For dense spectral sampling, 100 equally spaced wavelengths are generated
-between these two limits.
+```text
+WAVE 1  -> minimum wavelength
+WAVE 11 -> maximum wavelength
+```
 
 ### Temporary wavelength modification
 
 Each sampled wavelength is temporarily assigned to `WAVE 1` using
-`zSetMulticon()`. The model is then refreshed with `zGetUpdate()` before
-the ray trace is performed. The sequence for a sampled wavelength is therefore:
+`zSetMulticon()`, and the optical model is refreshed with
+`zGetUpdate()` before tracing the corresponding rays. When
+reconstructing intermediate diffraction orders, the echelle order
+parameter is also modified through the MCE. The basic sequence is:
 
-    zSetConfig()
-         |
-         v
-    zGetMulticon()
-         |
-         v
-    zSetMulticon()
-         |
-         v
-    zGetUpdate()
-         |
-         v
-    zGetTrace()
+```text
+zSetConfig()
+     |
+     v
+zGetMulticon()
+     |
+     v
+zSetMulticon()
+     |
+     v
+zGetUpdate()
+     |
+     v
+zGetTrace()
+```
+
+After completing the ray tracing, the original MCE values are
+restored and the optical model is updated, preventing temporary
+modifications from affecting subsequent calculations.
 
 ### Ray tracing
 
-For each sampled wavelength, rays are traced to the selected optical surface
-using `zGetTrace()`. The sampling strategy is configurable independently for
-the source field and the normalized pupil, with random and hexapolar
-distributions available depending on the analysis. For point-source analyses,
-a single field position is combined with random sampling of the normalized
-pupil. Finite-slit analyses use random sampling across both the source field
-and the pupil. For the circular-fiber analysis, both are sampled using
-hexapolar distributions.
+Ray tracing is performed using `zGetTrace()`, with the field
+coordinates, normalized-pupil coordinates, wavelength, and target
+surface specified according to the analysis. The sampling strategy
+depends on the input-source geometry:
 
-In the full-format fiber calculation, the `100 µm` circular fiber is sampled
-with 91 field positions arranged in a five-ring hexapolar distribution, and
-each field position is traced through 91 normalized-pupil positions generated
-with an independent five-ring hexapolar distribution. Each diffraction order
-is sampled at 100 wavelengths. A reduced five-field representation of the
-fiber is also implemented and benchmarked against the 91-field calculation.
-In this case, only the source-field sampling is reduced to the fiber center and
-the four extrema along X and Y, while the 91-point hexapolar pupil sampling is
-retained.
+- Point-source analyses use a single field position and random
+  normalized-pupil sampling.
+- Finite-slit analyses sample the source extent and pupil using
+  random distributions.
+- Circular-fiber analyses use deterministic hexapolar sampling
+  of the source field and normalized pupil.
 
-For the initial multi-configuration spectral reconstruction, the tracing
-sequence can be represented conceptually as:
+For the full-format fiber calculation, the circular fiber is
+represented by 91 field positions arranged in a five-ring
+hexapolar distribution, each traced through 91 normalized-pupil
+positions, producing 8,281 rays per wavelength. A reduced sampling
+strategy uses five representative fiber positions corresponding
+to the center and four extrema along X and Y, while retaining
+the 91-point pupil distribution. This allows the effect of
+reducing the source-field sampling to be evaluated independently.
 
-    Configuration 1
-        ├──> wavelength 1   -> pupil sample -> ray tracing
-        ├──> wavelength 2   -> pupil sample -> ray tracing
-        ├── ...
-        └──> wavelength 100 -> pupil sample -> ray tracing
+The general tracing sequence for a finite input source is:
 
-    Configuration 2
-        ├──> wavelength 1   -> pupil sample -> ray tracing
-        ├──> wavelength 2   -> pupil sample -> ray tracing
-        ├── ...
-        └──> wavelength 100 -> pupil sample -> ray tracing
+```text
+Diffraction order
+    |
+    ├──> wavelength 1
+    │       ├──> field position 1 -> pupil sample -> ray tracing
+    │       ├──> field position 2 -> pupil sample -> ray tracing
+    │       ├── ...
+    │       └──> field position N -> pupil sample -> ray tracing
+    │
+    ├──> wavelength 2
+    │       └──> field positions -> pupil samples -> ray tracing
+    │
+    ├── ...
+    │
+    └──> wavelength 100
+            └──> field positions -> pupil samples -> ray tracing
+```
 
-        ...
+Here, `N = 91` for the full fiber sampling and `N = 5` for
+the reduced sampling strategy.
 
-    Configuration 13
-        ├──> wavelength 1   -> pupil sample -> ray tracing
-        ├──> wavelength 2   -> pupil sample -> ray tracing
-        ├── ...
-        └──> wavelength 100 -> pupil sample -> ray tracing
+For the spectropolarimetric analysis, the source-field sampling
+is extended to two spatially displaced circular images, each
+represented by nine field positions: its center and eight equally
+spaced points along its circumference. The physical input
+coordinates are converted into normalized Zemax field coordinates,
+and 91 hexapolar pupil rays are traced for each field position.
+The resulting tracing sequence becomes:
 
-For the extended-source fiber analysis, the tracing sequence includes the
-additional fiber-position sampling:
+```text
+Diffraction order
+    |
+    ├──> wavelength 1
+    │       ├──> polarimetric image 1
+    │       │       └──> 9 field positions -> 91 pupil rays each
+    │       │
+    │       └──> polarimetric image 2
+    │               └──> 9 field positions -> 91 pupil rays each
+    │
+    ├──> wavelength 2
+    │       └──> both images -> field sampling -> pupil sampling
+    │
+    ├── ...
+    │
+    └──> wavelength 100
+            └──> both images -> field sampling -> pupil sampling
+```
 
-    Diffraction order
-        ├──> wavelength 1
-        │       ├──> fiber position 1 -> pupil sample -> ray tracing
-        │       ├──> fiber position 2 -> pupil sample -> ray tracing
-        │       ├── ...
-        │       └──> fiber position N -> pupil sample -> ray tracing
-        │
-        ├──> wavelength 2
-        │       └──> fiber positions -> pupil samples -> ray tracing
-        │
-        ├── ...
-        │
-        └──> wavelength 100
-                └──> fiber positions -> pupil samples -> ray tracing
-
-where `N = 91` for the full hexapolar fiber sampling and `N = 5` for the
-reduced fiber-field sampling experiment.
-
-After the sampled wavelengths of a configuration have been traced, the
-original `WAVE 1` value is restored in the MCE and the model is updated again
-with `zGetUpdate()` before proceeding to the next configuration. This
-restoration prevents temporary wavelength modifications from affecting
-subsequent configurations or analyses.
+This procedure produces 1,638 traced rays per wavelength,
+corresponding to two images, nine field positions per image,
+and 91 pupil rays per field. The detector coordinates are
+subsequently grouped by diffraction order and polarimetric
+image to reconstruct their spectral envelopes.
 
 ## Current Analysis Status
 
 The current workflow provides a complete single-fiber analysis of the EMAR
 echelle format from `m = 60` to `m = 144`. A circular `100 µm` input fiber is
-traced across all 85 integer diffraction orders using the 91-field sampling,
-providing wavelength-dependent projected fiber dimensions, spectral dispersion,
-resolving power, and adjacent-order separation. A reduced five-field sampling
-was benchmarked against this solution, reproducing the wavelength-dependent
+traced across all 85 integer diffraction orders using 91-field hexapolar
+sampling, providing wavelength-dependent projected fiber dimensions, lineal
+dispersion, resolving power, and adjacent-order separation. The calculated
+resolving power ranges from approximately `28,403` to `54,863` across the
+complete spectral format. A reduced five-field sampling strategy was
+benchmarked against the full calculation, reproducing the wavelength-dependent
 behavior of the projected fiber and resolving power at substantially lower
-computational cost. The 91-field results are retained for fiber-envelope and
-order-separation analyses.
+computational cost. The 91-field results are retained for fiber-envelope
+and order-separation analyses. Across the complete spectral format, adjacent
+single-fiber envelopes remain separated, with a minimum edge-to-edge distance
+of approximately `141 µm` between orders `m = 60` and `m = 61`.
 
-Across the complete spectral format, adjacent single-fiber envelopes remain
-separated, with a minimum edge-to-edge distance of approximately `141 µm`
-between orders `m = 60` and `m = 61`. These results provide the reference for
-the next development stage: tracing multiple fiber images within each echelle
-order and evaluating their compatibility with a dual-beam polarimetric
-configuration.
+Building on these results, the framework has been extended to investigate
+the geometric feasibility of a potential dual-beam spectropolarimetric
+configuration. Two spatially separated images of the same `100 µm` input
+fiber are propagated through the optical model, with their center-to-center
+separation treated as an adjustable parameter. The analysis initially
+focuses on diffraction orders `m = 60` and `m = 61`, identified as the
+adjacent pair with the smallest inter-order separation. Their detector
+envelopes are reconstructed using 100 wavelengths per order, nine field
+positions per image, and 91 pupil rays per field. Different input-image
+separations are evaluated to characterize the geometric clearance and
+potential overlap between the polarimetric envelopes of these orders.
+
+The procedure is subsequently extended to all 85 integer diffraction
+orders using `EMAR_polarimetric_all_orders.py`. For a center-to-center
+input-image separation of `350 µm`, the complete polarimetric spectral
+format is reconstructed, and the geometric clearance between adjacent
+orders is evaluated. Across 336 comparisons, corresponding to the four
+possible polarimetric-image combinations for each pair of neighboring
+orders, no envelope overlaps are detected. The minimum geometric
+clearance is approximately `44.45 µm`, occurring between the upper image
+of order `m = 60` and the lower image of order `m = 61`. These results
+indicate that the investigated configuration maintains positive
+inter-order clearance within the adopted geometrical model, providing
+a basis for further evaluation of the detector-space requirements
+without explicitly modeling the polarization-splitting optics.
